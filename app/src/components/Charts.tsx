@@ -1,6 +1,8 @@
 // Inline-SVG charts for the end-of-match report. No chart library.
 
 import type { Shot } from "../db/schema";
+import { PITCH_VIEWBOX, toSvg } from "../pitch/geometry";
+import { PitchMarkings } from "../pitch/PitchMarkings";
 import type { HistogramBin, TimelinePoint } from "../xg/report";
 
 const HOME = "#35d07f";
@@ -120,27 +122,23 @@ export function XgHistogram({
 export function ShotMap({ shots }: { shots: Shot[] }) {
   return (
     <figure className="chart">
-      <svg className="pitch" viewBox="58 -3 66 86" role="img" aria-label="Shot map">
-        <rect x={58} y={-3} width={66} height={86} fill="#0b7a43" />
-        <g stroke="#eafff2" strokeWidth={0.4} fill="none" opacity={0.9}>
-          <line x1={60} y1={0} x2={60} y2={80} />
-          <rect x={102} y={18} width={18} height={44} />
-          <rect x={114} y={30} width={6} height={20} />
-          <path d="M 102 32 A 10 10 0 0 1 102 48" />
-          <line x1={120} y1={36} x2={120} y2={44} stroke="#fff" strokeWidth={0.9} />
-        </g>
-        {shots.map((s, i) => (
-          <circle
-            key={i}
-            cx={s.input.x}
-            cy={s.input.y}
-            r={1 + s.xg * 6}
-            fill={s.outcome === "goal" ? GOAL : s.side === "home" ? HOME : AWAY}
-            opacity={s.outcome === "goal" ? 0.95 : 0.7}
-            stroke="#06231a"
-            strokeWidth={0.2}
-          />
-        ))}
+      <svg className="pitch" viewBox={PITCH_VIEWBOX} role="img" aria-label="Shot map">
+        <PitchMarkings />
+        {shots.map((s, i) => {
+          const [cx, cy] = toSvg(s.input.x, s.input.y);
+          return (
+            <circle
+              key={i}
+              cx={cx}
+              cy={cy}
+              r={1 + s.xg * 6}
+              fill={s.outcome === "goal" ? GOAL : s.side === "home" ? HOME : AWAY}
+              opacity={s.outcome === "goal" ? 0.95 : 0.7}
+              stroke="#06231a"
+              strokeWidth={0.2}
+            />
+          );
+        })}
       </svg>
       <figcaption>
         <Key c={HOME} label="home" /> <Key c={AWAY} label="away" /> <Key c={GOAL} label="goal" /> — dot size ∝ xG
