@@ -1,0 +1,20 @@
+# Core data + modelling
+numpy>=1.26
+pandas>=2.1
+scikit-learn>=1.4
+lightgbm>=4.3
+requests>=2.31
+tqdm>=4.66
+
+# Explainability
+shap>=0.44
+
+# Plots for the evaluation report
+matplotlib>=3.8
+
+# ONNX export (serving in the browser)
+onnx>=1.16
+onnxmltools>=1.12
+onnxconverter-common>=1.14
+skl2onnx>=1.17
+onnxruntime>=1.17

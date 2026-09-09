@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+training/.venv/
+
+# Data — large, re-downloadable via training/pull_data.py
+training/data/raw/
+training/data/processed/
+
+# Training artifacts (regenerable); the released model lives in models/
+training/artifacts/
+
+# OS / editor
+.DS_Store
+*.swp
