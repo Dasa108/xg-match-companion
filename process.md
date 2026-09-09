@@ -542,12 +542,86 @@ clicked through live. Covered instead by:
 
 ---
 
+---
+
+## Phase 3 — Reporting (M3)  ✅
+
+**End state.** The end-of-match report is complete: FT score, xG verdict, player
+leaderboard with best-xG + efficiency picks, SVG shot map, cumulative xG timeline,
+chance-quality histogram, per-shot reason + confidence band, and JSON/CSV export. All the
+logic is in pure, unit-tested modules; the screens just draw it. **356 tests, all green.**
+
+### 3.1 Pure modules first, charts second
+
+| module | does | tested |
+|---|---|---|
+| `xg/verdict.ts` | team aggregates, spec §9 verdict string, player leaderboard | `verdict.test.ts` |
+| `xg/report.ts` | `cumulativeXgSeries` (step series per side), `xgHistogram` (banded counts) | `report.test.ts` |
+| `xg/reason.ts` | rule-of-thumb explanation + confidence band | `report.test.ts` |
+| `xg/exportMatch.ts` | `matchToJson`, `shotsToCsv`, `downloadText` | `report.test.ts` |
+| `components/Charts.tsx` | inline-SVG `XgTimeline`, `XgHistogram`, `ShotMap` | (visual) |
+
+**Why.** Every number in the report is produced by a function that takes `Shot[]` and
+returns data — so it's testable with three hand-built rows, and the SVG components are
+dumb: given points, draw points. The charts use no library (spec: no CDN, small bundle);
+a step-line path and grouped `<rect>` bars are ~15 lines each.
+
+**Learn.**
+- A chart is *two* problems — shape the data, then draw it. Keep them in separate files.
+  The data shaping is where bugs and off-by-ones live, and that half needs no DOM to test.
+- Cumulative step series: emit a point at each event carrying the *running* total, and a
+  synthetic end point so the line reaches full time. The "step" is drawn by the path
+  (horizontal to the new x at the old y, then vertical), not by the data.
+
+### 3.2 The reason string is honest about what it is
+
+**What.** `explainXg(features, bucket)` returns e.g. *"point-blank range, one-on-one with
+the keeper, the keeper off his line"* — the top few of a weighted phrase list read off the
+feature values. `confidenceBand` returns `xg ± {0.025, 0.04, 0.06}` for full / partial /
+minimal.
+
+**Why not SHAP.** Spec originally said "SHAP values per prediction". SHAP needs the model
+to emit per-feature contributions, which the ONNX export doesn't. Rather than ship a
+fake "SHAP" label, v1 ships a transparent rule-of-thumb and the spec now says so (§5.2
+step 8, §8.5 step 6). The band widths are labelled *illustrative of the measured
+bucket accuracy gap*, not calibrated intervals — a real interval needs quantile models
+(v2).
+
+**Learn.** When you can't build the thing the spec named, change the spec to describe what
+you *did* build and why — don't relabel a simpler thing with the fancier name. A reader
+who sees "SHAP" will trust it as attribution; "rule-of-thumb read of the features" sets
+the right expectation.
+
+### 3.3 Export
+
+`matchToJson` emits `{schema:"xg-match-companion/v1", match, summary, players, leaderboard,
+shots}`; `shotsToCsv` emits one row per shot with RFC-4180 quoting (`"O'Neil, A"`).
+`downloadText` makes a `Blob`, clicks a temporary `<a download>`, revokes the URL. That
+anchor trick is inert inside the Artifact sandbox but fine here — this app is the user's
+own page, not a hosted artifact.
+
+### 3.4 Spec deviations recorded this phase
+
+- `Team` table folded into `Match` (`homeName`/`awayName` + `side` enum) — §7.
+- `reason` is heuristic, not SHAP — §5.2 step 8, §8.5 step 6.
+- Confidence band widths are illustrative, not calibrated — §5.2 step 8.
+- Histogram is per-band shot *counts* per side (grouped bars), matching "shots by chance
+  quality".
+
+### Still open before M4
+
+- Manual browser click-through (Chrome extension not connected this session).
+- Full optional-detail inputs in `ShotEntry` (technique, keeper-state, pass-origin marker).
+- Trim the 27 MB `ort-wasm-simd-threaded.jsep` from the bundle; service worker.
+
+---
+
 ### How to run the app
 
 ```bash
 cd app
 npm install
 npm run dev        # http://localhost:5173  — sync-assets runs first
-npm test           # 350 parity + lifecycle tests
+npm test           # 356 parity + lifecycle + report tests
 npm run build      # type-check + production bundle in dist/
 ```

@@ -110,9 +110,13 @@ produces a conclusion:
    (`set` / `advancing` / `off line` / `beaten` / `on ground` / `unsighted`).
 7. **Outcome**: `goal` / `saved` / `off target` / `blocked` / `post`. (Used for reporting and
    future retraining, **not** for the pre-shot xG computation.)
-8. Save. xG is computed instantly and shown with a one-line SHAP-style reason
-   ("close range, tight angle, keeper off line") and a confidence band whose width reflects
-   the shot's completeness bucket (§8.4).
+8. Save. xG is computed instantly and shown with a one-line reason
+   ("close range, tight angle, keeper off his line") and a confidence band whose width
+   reflects the shot's completeness bucket (§8.4).
+   *(As built: the reason is a rule-of-thumb read of the feature values, not SHAP —
+   `app/src/xg/reason.ts`. The band widths (±0.025 / ±0.04 / ±0.06 for full / partial /
+   minimal) are illustrative of the measured bucket accuracy gap, not calibrated intervals.
+   True per-shot attribution + prediction intervals are a v2 item.)*
 
 Every field except shot location, shooter, and outcome has a default and may be left untouched.
 
@@ -126,10 +130,16 @@ Every field except shot location, shooter, and outcome has a default and may be 
   goals, `goals − xG` (finishing delta). Sortable.
 - **Best xG player:** highest total xG (primary). Also surface best xG/shot with ≥ 3 shots
   (efficiency award).
-- **Shot map:** all shots plotted, radius ∝ xG, colour by outcome, per team.
+- **Shot map:** all shots plotted, radius ∝ xG, colour: goal / home / away.
 - **xG timeline:** cumulative step chart per team over match minutes.
-- **Shot-quality distribution:** histogram of xG per team.
-- Export: full match JSON + flat shots CSV.
+- **Shot-quality distribution:** grouped histogram, shots per xG band per team
+  (bands 0–.05–.1–.2–.35–.6–1).
+- **Export** (`app/src/xg/exportMatch.ts`):
+  - `<date>_<home>-v-<away>.json` — `{schema:"xg-match-companion/v1", match, summary
+    (team aggs + verdict), players, leaderboard, shots}`.
+  - `<...>_shots.csv` — one row per shot: match, date, minute, side, team, number, player,
+    x, y, shot_type, body_part, under_pressure, bucket, xg, raw, outcome, is_goal.
+  - Delivered as a browser download (plain `Blob` + anchor; the app is the user's own).
 
 ---
 
@@ -181,6 +191,11 @@ Shot       { id, match_id, team_id, player_id, minute, inputs(JSON per §6),
 - Storage: **IndexedDB** on device (Dexie). One DB, all matches. No server required for v1.
 - `features` is persisted so predictions are reproducible and auditable offline.
 - `inputs` stores raw operator entries verbatim (for retraining and PSxG later).
+- **As built (`app/src/db/schema.ts`):** `Team` is folded into `Match`
+  (`homeName`/`awayName`) since there are always exactly two, identified by a `side` enum
+  on `Player` and `Shot`. `Shot` also stores `bucket` and `raw` (uncalibrated model
+  output). The match clock is `{clockStartedAt, clockAccumMs}` — elapsed is recomputed,
+  never ticked in storage. Delete cascades match → players → shots in one transaction.
 
 ---
 
@@ -293,7 +308,9 @@ Penalties bypass the model entirely (constant xG = 0.76).
 5. **Calibration:** fit isotonic regression **per completeness bucket** (`minimal` /
    `partial` / `full`) on a held-out calibration slice. Verify reliability diagram +
    Expected Calibration Error and Σ xG ≈ Σ goals *within each bucket*.
-6. **Explainability:** SHAP values per prediction → the `reason` string in the app.
+6. **Explainability:** v1 ships a rule-of-thumb `reason` string derived from the feature
+   values (`app/src/xg/reason.ts`). SHAP-based per-shot attribution is a v2 upgrade
+   (needs the model to export contributions).
 7. **Degradation check:** evaluate the frozen test set with each completeness level simulated
    by masking optional groups (§8.6); confirm richer inputs never score worse than sparser.
 
@@ -439,9 +456,9 @@ xG/
 | Milestone | Contents |
 |---|---|
 | **M1 — Model** ✅ done | StatsBomb pull, feature engineering, logistic baseline, one adaptive LightGBM with feature-group dropout, per-bucket isotonic calibration, §8.6 gates met across completeness levels (release gate PASS), `models/model.onnx` + `feature_spec.json` + `calibrators.json` + parity fixtures. |
-| **M2 — Logging app** | Website shell, team-sheet setup, pitch tap + markers, quick chips, in-browser inference, IndexedDB persistence. |
-| **M3 — Reporting** | Live tallies, end-of-match report, shot map, xG timeline, leaderboard, verdict strings, export. |
-| **M4 — Hardening** | Service-worker offline caching, performance pass, real-match trial, feedback fixes. |
+| **M2 — Logging app** ✅ done | `app/` (Vite + React + TS). TS port of the serve path (`src/xg/`), 340 parity tests vs `feature_fixtures.json`. Dexie/IndexedDB persistence, `setup → live → finished` lifecycle, team sheets, pitch tap + markers, quick chips, in-browser onnxruntime-web inference, live team + per-player tallies. *(Not yet clicked through in a real browser — headless tests + `vite preview` only.)* |
+| **M3 — Reporting** ✅ done | End-of-match report: FT score, xG verdict string (§9), player leaderboard + best-xG/efficiency picks, SVG shot map, cumulative xG timeline, chance-quality histogram; per-shot reason string + confidence band; JSON + CSV export. Pure logic in `src/xg/{verdict,report,reason,exportMatch}.ts`, all unit-tested (356 tests total). |
+| **M4 — Hardening** | Manual browser pass; trim the 27 MB onnxruntime-web bundle to the plain wasm backend; service-worker offline caching; expose the full optional-detail input set (§5.2 step 6); performance pass; real-match trial. |
 | **v2** | PSxG model + goal-mouth input, retraining loop, optional sync backend, game-state feature experiment. |
 
 ---

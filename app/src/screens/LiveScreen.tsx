@@ -5,12 +5,13 @@ import { usePlayers, useShots } from "../db/hooks";
 import {
   deleteShot, elapsedMinute, finishMatch, type Match, setClockMinute, toggleClock,
 } from "../db/schema";
-import { teamAggs } from "../xg/verdict";
+import { playerLeaderboard, teamAggs } from "../xg/verdict";
 
 export function LiveScreen({ match, onReport }: { match: Match; onReport: () => void }) {
   const players = usePlayers(match.id);
   const shots = useShots(match.id);
   const [, tick] = useState(0);
+  const [showPlayers, setShowPlayers] = useState(false);
 
   // keep the clock display ticking while it runs
   useEffect(() => {
@@ -45,6 +46,36 @@ export function LiveScreen({ match, onReport }: { match: Match; onReport: () => 
       </div>
 
       <ShotEntry match={match} players={players} minute={minute} onSaved={() => tick((n) => n + 1)} />
+
+      <section>
+        <h3 className="row spread">
+          <span>Players</span>
+          <button className="mini ghost" onClick={() => setShowPlayers((v) => !v)}>
+            {showPlayers ? "hide" : "show xG"}
+          </button>
+        </h3>
+        {showPlayers && (
+          <table className="board">
+            <thead>
+              <tr><th>player</th><th>sh</th><th>xG</th><th>G</th></tr>
+            </thead>
+            <tbody>
+              {playerLeaderboard(shots, players).map((p) => (
+                <tr key={p.playerId}>
+                  <td>
+                    {p.number != null ? `${p.number}. ` : ""}{p.name}
+                    <span className="muted"> · {p.side === "home" ? home.name : away.name}</span>
+                  </td>
+                  <td>{p.shots}</td>
+                  <td>{p.xg.toFixed(2)}</td>
+                  <td>{p.goals}</td>
+                </tr>
+              ))}
+              {shots.length === 0 && <tr><td colSpan={4} className="muted">No shots yet.</td></tr>}
+            </tbody>
+          </table>
+        )}
+      </section>
 
       <section>
         <h3>

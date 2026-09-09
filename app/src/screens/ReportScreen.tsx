@@ -1,5 +1,8 @@
+import { ShotMap, XgHistogram, XgTimeline } from "../components/Charts";
 import { usePlayers, useShots } from "../db/hooks";
-import { type Match, reopenMatch } from "../db/schema";
+import { elapsedMinute, type Match, reopenMatch } from "../db/schema";
+import { downloadText, matchToJson, shotsToCsv, slugMatch } from "../xg/exportMatch";
+import { cumulativeXgSeries, xgHistogram } from "../xg/report";
 import {
   bestXgPlayer, efficiencyPick, playerLeaderboard, teamAggs, verdictLine,
 } from "../xg/verdict";
@@ -11,6 +14,8 @@ export function ReportScreen({ match, onLive }: { match: Match; onLive: () => vo
   const board = playerLeaderboard(shots, players);
   const best = bestXgPlayer(board);
   const eff = efficiencyPick(board);
+  const timeline = cumulativeXgSeries(shots, elapsedMinute(match) || 90);
+  const hist = xgHistogram(shots);
 
   return (
     <div className="screen">
@@ -28,6 +33,21 @@ export function ReportScreen({ match, onLive }: { match: Match; onLive: () => vo
       </section>
 
       <section>
+        <h3>xG timeline</h3>
+        <XgTimeline points={timeline} homeName={home.name} awayName={away.name} />
+      </section>
+
+      <section>
+        <h3>Shot map</h3>
+        <ShotMap shots={shots} />
+      </section>
+
+      <section>
+        <h3>Chance quality</h3>
+        <XgHistogram bins={hist} homeName={home.name} awayName={away.name} />
+      </section>
+
+      <section>
         <h3>Player xG</h3>
         {best && (
           <p className="muted">
@@ -40,12 +60,7 @@ export function ReportScreen({ match, onLive }: { match: Match; onLive: () => vo
         <table className="board">
           <thead>
             <tr>
-              <th>player</th>
-              <th>sh</th>
-              <th>xG</th>
-              <th>xG/sh</th>
-              <th>G</th>
-              <th>G−xG</th>
+              <th>player</th><th>sh</th><th>xG</th><th>xG/sh</th><th>G</th><th>G−xG</th>
             </tr>
           </thead>
           <tbody>
@@ -67,50 +82,35 @@ export function ReportScreen({ match, onLive }: { match: Match; onLive: () => vo
               </tr>
             ))}
             {board.length === 0 && (
-              <tr>
-                <td colSpan={6} className="muted">
-                  No attributed shots.
-                </td>
-              </tr>
+              <tr><td colSpan={6} className="muted">No attributed shots.</td></tr>
             )}
           </tbody>
         </table>
       </section>
 
       <section>
-        <h3>Shot map</h3>
-        <ShotMap shots={shots} />
+        <h3>Export</h3>
+        <div className="row gap">
+          <button
+            onClick={() =>
+              downloadText(`${slugMatch(match)}.json`, matchToJson(match, players, shots), "application/json")
+            }
+          >
+            match JSON
+          </button>
+          <button
+            onClick={() =>
+              downloadText(`${slugMatch(match)}_shots.csv`, shotsToCsv(match, players, shots), "text/csv")
+            }
+          >
+            shots CSV
+          </button>
+        </div>
       </section>
 
       <button className="ghost big" onClick={async () => { await reopenMatch(match.id); onLive(); }}>
         ← reopen match
       </button>
     </div>
-  );
-}
-
-function ShotMap({ shots }: { shots: { input: { x: number; y: number }; xg: number; side: string; outcome: string }[] }) {
-  return (
-    <svg className="pitch" viewBox="58 -3 66 86" role="img" aria-label="Shot map">
-      <rect x={58} y={-3} width={66} height={86} fill="#0b7a43" />
-      <g stroke="#eafff2" strokeWidth={0.4} fill="none" opacity={0.9}>
-        <line x1={60} y1={0} x2={60} y2={80} />
-        <rect x={102} y={18} width={18} height={44} />
-        <rect x={114} y={30} width={6} height={20} />
-        <line x1={120} y1={36} x2={120} y2={44} stroke="#fff" strokeWidth={0.9} />
-      </g>
-      {shots.map((s, i) => (
-        <circle
-          key={i}
-          cx={s.input.x}
-          cy={s.input.y}
-          r={1 + s.xg * 6}
-          fill={s.outcome === "goal" ? "#ffd34d" : s.side === "home" ? "#35d07f" : "#1f9dff"}
-          opacity={0.75}
-          stroke="#06231a"
-          strokeWidth={0.2}
-        />
-      ))}
-    </svg>
   );
 }

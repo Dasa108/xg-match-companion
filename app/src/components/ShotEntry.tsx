@@ -4,6 +4,7 @@ import type { Match, Outcome, Player, Side } from "../db/schema";
 import { saveShot } from "../db/schema";
 import { Pitch, type Tool } from "../pitch/Pitch";
 import { predictXg } from "../xg/model";
+import { confidenceBand, explainXg } from "../xg/reason";
 import type { AssistType, BodyPart, PlayPattern, ShotInput, XgResult, XY } from "../xg/types";
 
 const BODY: BodyPart[] = ["right_foot", "left_foot", "head", "other"];
@@ -145,19 +146,26 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
       <div className="result">
         {!shot && <p className="hint">Tap the pitch where the shot was taken.</p>}
         {result && (
-          <div className="row spread">
-            <div>
-              <span className="xg">{result.xg.toFixed(2)}</span>
-              <span className="xg-unit"> xG</span>
+          <>
+            <div className="row spread">
+              <div>
+                <span className="xg">{result.xg.toFixed(2)}</span>
+                <span className="xg-unit"> xG</span>
+                {(() => {
+                  const [lo, hi] = confidenceBand(result.xg, result.bucket);
+                  return <span className="band"> {lo.toFixed(2)}–{hi.toFixed(2)}</span>;
+                })()}
+              </div>
+              <div className="meta">
+                {result.bucket}
+                {result.raw != null &&
+                  ` · d${Number(result.features.distance).toFixed(0)} · ${(
+                    (Number(result.features.angle) * 180) / Math.PI
+                  ).toFixed(0)}°`}
+              </div>
             </div>
-            <div className="meta">
-              {result.bucket}
-              {result.raw != null &&
-                ` · d${Number(result.features.distance).toFixed(0)} · ${(
-                  (Number(result.features.angle) * 180) / Math.PI
-                ).toFixed(0)}°`}
-            </div>
-          </div>
+            <div className="why">{explainXg(result.features, result.bucket)}</div>
+          </>
         )}
       </div>
 
