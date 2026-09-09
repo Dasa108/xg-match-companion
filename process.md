@@ -371,8 +371,112 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.lock.txt
 
 - Positional jitter is approximate (noise on derived distances). Proper version: persist raw
   freeze-frame coords, recompute features under jitter. v2.
-- `feature_fixtures.json` needs its TypeScript counterpart test in `app/` (M2).
 - SHAP-based `reason` strings (spec §8.5 step 6) not built yet — deferred to M2/M3 where the
   UI consumes them.
 - `models/model.txt` is committed for now (692 KB, human-diffable); could switch to
   ONNX-only once the TS path is trusted.
+
+---
+
+## Phase 2 — Logging app (M2)  🚧 in progress
+
+**End state so far.** `app/` is a Vite + React + TypeScript project. The whole xG
+serve path — feature engineering, encoding, the ONNX model, per-bucket calibration — is
+ported to TypeScript and **checked against the Python pipeline by 340 automated
+assertions**. A working demo screen computes live xG from a tapped pitch. Still to do:
+team sheets, the match lifecycle, IndexedDB persistence, the end-of-match report.
+
+### 2.1 Refactor first: one contract for two languages
+
+**What.** Before writing any TypeScript, split `training/features.py` into
+`event_to_input()` (StatsBomb-specific parsing) and `features_from_input()` (pure
+input-dict → feature-dict maths). `build_shot_row()` is now just the two composed.
+
+**Why.** The browser never sees a StatsBomb event — it has operator taps. The thing the
+TS port must reproduce is *only* the input→features maths. Isolating that into one pure
+function makes it a portable spec, and lets `feature_fixtures.json` carry the
+operator-shaped `input` dict so the TS test can go input → features → row → xg end to end.
+
+**Learn.** When the same logic has to run in two languages, first carve it down to the
+*smallest pure core* that actually needs to cross the boundary. Verified the refactor
+changed nothing: rebuilt the dataset, retrained — identical `best_iteration` (290) and
+identical test metrics.
+
+### 2.2 The app scaffold
+
+**What.** `package.json` (Vite 6, React 18, vitest), `vite.config.ts` (+ a *separate*
+`vitest.config.ts`), `tsconfig.json`, `scripts/sync-assets.mjs`.
+
+**Why the choices.**
+- **`sync-assets.mjs`** copies the three model files from `models/` into
+  `app/public/model/`, the fixtures into `src/xg/__fixtures__/`, and onnxruntime-web's
+  wasm into `public/ort/`. It runs before `dev`/`build`/`test`. The app never reaches
+  across the repo at runtime; the model is a build input, and all the synced paths are
+  `.gitignore`d (single source of truth stays in `models/` + `training/`).
+- **Two config files.** Importing `defineConfig` from `vitest/config` to get the `test`
+  key pulls a *second, nested* copy of Vite's types, and `tsc` then rejects the React
+  plugin as "a different `Plugin` type". Fix: `vite.config.ts` imports from `vite`,
+  `vitest.config.ts` imports from `vitest/config`. Vitest picks up its own file.
+
+**Gotcha.** Vite bundled a 27 MB `ort-wasm-simd-threaded.jsep` file into `dist/` because
+`onnxruntime-web`'s entry pulls the WebGPU build into the import graph. Runtime still uses
+the smaller wasm from `/ort/` (`ort.env.wasm.wasmPaths`). Trimming the bundle to the plain
+wasm backend is an M4 hardening task.
+
+### 2.3 The TypeScript port (`src/xg/`)
+
+| file | mirror of | notes |
+|---|---|---|
+| `features.ts` | `features.py` | `shotGeometry`, `freezeFrameFeatures`, `featuresFromInput`, `presentGroups`. Pure. Vocabularies + `FEATURE_GROUPS` duplicated here (a test asserts they equal `feature_spec.json`). |
+| `encode.ts` | `encode.py` | `MODEL_FEATURES` order, `encodeRow` (numeric cols then one-hot), `maskGroups` (= `apply_bucket_mask`), `BUCKET_KEEP`. |
+| `calibrate.ts` | isotonic `interp` + `completeness_bucket` | kept ORT-free so tests don't load a runtime. `interp` matches `numpy.interp` (flat extrapolation, binary search). |
+| `model.ts` | serving path | `onnxruntime-web` session (lazy, cached), `predictXg(input)`: features → pick bucket → mask → encode → ONNX → calibrate. Penalties short-circuit to 0.76. |
+
+**Learn.**
+- Port the *contract constants* (feature order, vocab, group membership) explicitly and
+  then **test that they equal the JSON the model shipped with**. Drift between the two
+  languages is the whole risk; make it a red test, not a production surprise.
+- `NaN` isn't valid JSON. `json.dumps` writes a bare `NaN` token that `JSON.parse`
+  rejects. Fixtures now emit `null` for missing numerics; the loaders on both sides turn
+  `null` back into `NaN` before the model sees it.
+- Represent "feature not provided" as exactly one thing per type — numeric `NaN`,
+  categorical `null`/all-zero-one-hot — and make the Python and TS encoders agree on it.
+
+### 2.4 The parity suite (`src/xg/*.test.ts`) — 340 assertions
+
+- **`features.test.ts`** (node env): for all 48 fixtures — `featuresFromInput(input)` ==
+  `features` (numbers to 1e-6, strings/nulls exact); `encodeRow(maskGroups(...))` ==
+  each bucket's stored `row`; `interp(calibrator, raw)` == stored `xg`;
+  `MODEL_FEATURES` == `feature_spec.json`.
+- **`model.node.test.ts`**: loads `model.onnx` with `onnxruntime-node`, runs every
+  fixture row through the *same call shape* `model.ts` uses, checks `raw` < 1e-5 and
+  calibrated `xg` < 1e-4 vs the fixtures. (Browser wasm path is exercised when the app
+  runs; the API surface — `InferenceSession.create(bytes)`, `Tensor`, `run` — is
+  identical between `onnxruntime-node` and `-web`.)
+
+**Learn.** Split the "is my maths right" test (fast, pure, runs everywhere) from the "does
+the model binary load and run" test (needs a runtime). Both matter; coupling them makes
+the fast one slow and flaky.
+
+### 2.5 The demo screen (`App.tsx`, `pitch/Pitch.tsx`)
+
+**What.** An SVG attacking-half pitch (StatsBomb 120×80 `viewBox`). Tap tool = shot /
+keeper / defender. Chips for body part, situation, pressure, optional assist and context.
+Every change rebuilds the `ShotInput` and calls `predictXg`; the xG, the completeness
+bucket, and the raw model probability render live.
+
+**Why.** Proves the entire offline serve path in a real browser before any of the
+match-management UI is built. The number on screen is the same number the parity tests
+check.
+
+**Learn.** Get the risky, cross-cutting slice (model in the browser) working end to end
+*first*, on a throwaway screen. The CRUD around it (matches, players, storage) is
+well-trodden and can come after.
+
+### Still to build in M2
+
+- Pre-match team-sheet entry (both XIs + subs), match create/finish lifecycle.
+- Dexie/IndexedDB schema + persistence of matches, players, shots.
+- Shot attribution to a named player; the full 25-second entry flow from spec §5.2.
+- Live per-team / per-player xG tallies.
+- Trim the onnxruntime-web bundle; add the service worker (M4).
