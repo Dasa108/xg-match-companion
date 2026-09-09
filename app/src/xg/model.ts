@@ -10,7 +10,8 @@ import type { ShotInput, XgResult } from "./types";
 
 export { interp, pickBucket } from "./calibrate";
 
-ort.env.wasm.wasmPaths = "/ort/";
+// Let the bundler resolve onnxruntime-web's own wasm/mjs assets. (Do NOT set
+// ort.env.wasm.wasmPaths to a /public path — Vite refuses to transform files there.)
 
 interface Loaded {
   session: ort.InferenceSession;
