@@ -5,7 +5,9 @@ import { saveShot } from "../db/schema";
 import { Pitch, type Tool } from "../pitch/Pitch";
 import { predictXg } from "../xg/model";
 import { confidenceBand, explainXg } from "../xg/reason";
-import type { AssistType, BodyPart, PlayPattern, ShotInput, XgResult, XY } from "../xg/types";
+import type {
+  AssistType, BodyPart, PlayPattern, ShotContext, ShotInput, Technique, XgResult, XY,
+} from "../xg/types";
 
 const BODY: BodyPart[] = ["right_foot", "left_foot", "head", "other"];
 const SITUATION: { key: ShotInput["shot_type"]; play: PlayPattern; label: string }[] = [
@@ -18,6 +20,7 @@ const SITUATION: { key: ShotInput["shot_type"]; play: PlayPattern; label: string
 ];
 const PRESSURE = ["none", "light", "heavy"] as const;
 const ASSIST: AssistType[] = ["none", "cross", "through_ball", "cutback", "low_pass", "high_pass"];
+const TECHNIQUE: Technique[] = ["normal", "volley", "half_volley", "lob", "overhead_kick"];
 const OUTCOMES: Outcome[] = ["goal", "saved", "off_target", "blocked", "post"];
 
 interface Props {
@@ -32,6 +35,7 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
   const [shot, setShot] = useState<XY | null>(null);
   const [gk, setGk] = useState<XY | null>(null);
   const [defenders, setDefenders] = useState<XY[]>([]);
+  const [passOrigin, setPassOrigin] = useState<XY | null>(null);
 
   const [side, setSide] = useState<Side>("home");
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -41,7 +45,12 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
   const [assist, setAssist] = useState<AssistType | null>(null);
   const [firstTime, setFirstTime] = useState(false);
   const [oneOnOne, setOneOnOne] = useState(false);
+  const [technique, setTechnique] = useState<Technique | null>(null);
+  const [followsDribble, setFollowsDribble] = useState(false);
+  const [openGoal, setOpenGoal] = useState(false);
+  const [rebound, setRebound] = useState(false);
   const [outcome, setOutcome] = useState<Outcome>("saved");
+  const [showMore, setShowMore] = useState(false);
 
   const [result, setResult] = useState<XgResult | null>(null);
   const [saving, setSaving] = useState(false);
@@ -55,6 +64,14 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
     if (!shot) return null;
     const sit = SITUATION[sitIdx];
     const hasFreeze = gk != null || defenders.length > 0;
+    const ctxFlags: ShotContext = {
+      first_time: firstTime,
+      follows_dribble: followsDribble,
+      one_on_one: oneOnOne,
+      open_goal: openGoal,
+      rebound,
+    };
+    const anyCtx = Object.values(ctxFlags).some(Boolean);
     return {
       x: shot[0],
       y: shot[1],
@@ -64,12 +81,12 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
       under_pressure: pressure !== "none",
       freeze_frame: hasFreeze ? { gk, opponents: defenders, teammates_in_box: 0 } : null,
       assist_type: assist,
-      context:
-        firstTime || oneOnOne
-          ? { first_time: firstTime, follows_dribble: false, one_on_one: oneOnOne, open_goal: false, rebound: false }
-          : null,
+      technique,
+      pass_origin: passOrigin,
+      context: anyCtx ? ctxFlags : null,
     };
-  }, [shot, gk, defenders, bodyPart, sitIdx, pressure, assist, firstTime, oneOnOne]);
+  }, [shot, gk, defenders, passOrigin, bodyPart, sitIdx, pressure, assist, technique,
+      firstTime, followsDribble, oneOnOne, openGoal, rebound]);
 
   useEffect(() => {
     if (!input) return setResult(null);
@@ -83,6 +100,7 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
   function place(p: XY) {
     if (tool === "shot") setShot(p);
     else if (tool === "gk") setGk(p);
+    else if (tool === "pass") setPassOrigin(p);
     else setDefenders((d) => [...d, p]);
   }
 
@@ -90,11 +108,17 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
     setShot(null);
     setGk(null);
     setDefenders([]);
+    setPassOrigin(null);
     setPlayerId(null);
     setAssist(null);
+    setTechnique(null);
     setFirstTime(false);
+    setFollowsDribble(false);
     setOneOnOne(false);
+    setOpenGoal(false);
+    setRebound(false);
     setOutcome("saved");
+    setTool("shot");
     setResult(null);
   }
 
@@ -130,14 +154,22 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
         shot={shot}
         gk={gk}
         defenders={defenders}
+        passOrigin={passOrigin}
         onPlace={place}
         onRemoveDefender={(i) => setDefenders((d) => d.filter((_, k) => k !== i))}
       />
 
       <div className="tools">
-        {(["shot", "gk", "defender"] as Tool[]).map((t) => (
+        {(
+          [
+            ["shot", "◎ shot"],
+            ["gk", "🧤 keeper"],
+            ["defender", "▲ defender"],
+            ["pass", "⟶ pass"],
+          ] as [Tool, string][]
+        ).map(([t, label]) => (
           <button key={t} className={tool === t ? "on" : ""} onClick={() => setTool(t)}>
-            {t === "shot" ? "◎ shot" : t === "gk" ? "🧤 keeper" : "▲ defender"}
+            {label}
           </button>
         ))}
         <button onClick={reset}>reset</button>
@@ -145,6 +177,7 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
 
       <div className="result">
         {!shot && <p className="hint">Tap the pitch where the shot was taken.</p>}
+        {shot && !result && <p className="hint">computing xG…</p>}
         {result && (
           <>
             <div className="row spread">
@@ -206,6 +239,31 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
         <Chip on={firstTime} onClick={() => setFirstTime((v) => !v)} label="first-time" />
         <Chip on={oneOnOne} onClick={() => setOneOnOne((v) => !v)} label="one-on-one" />
       </fieldset>
+
+      <button className="ghost mini" onClick={() => setShowMore((v) => !v)}>
+        {showMore ? "− less detail" : "+ more detail"}
+      </button>
+      {showMore && (
+        <>
+          <fieldset>
+            <legend>technique (optional)</legend>
+            <Chip on={technique === null} onClick={() => setTechnique(null)} label="—" />
+            {TECHNIQUE.map((t) => (
+              <Chip key={t} on={technique === t} onClick={() => setTechnique(t)} label={t.replace("_", " ")} />
+            ))}
+          </fieldset>
+          <fieldset>
+            <legend>more context (optional)</legend>
+            <Chip on={followsDribble} onClick={() => setFollowsDribble((v) => !v)} label="beat a defender" />
+            <Chip on={openGoal} onClick={() => setOpenGoal((v) => !v)} label="open goal" />
+            <Chip on={rebound} onClick={() => setRebound((v) => !v)} label="rebound" />
+          </fieldset>
+          <p className="hint">
+            Use the <b>⟶ pass</b> tool to mark where the assist came from.
+          </p>
+        </>
+      )}
+
       <ChipRow legend="outcome" values={OUTCOMES} pick={outcome} set={setOutcome} fmt={(o) => o.replace("_", " ")} />
 
       <button className="primary" disabled={!canSave} onClick={commit}>

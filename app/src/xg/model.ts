@@ -28,7 +28,8 @@ let loadingP: Promise<Loaded> | null = null;
 function load(): Promise<Loaded> {
   if (!loadingP) {
     loadingP = (async () => {
-      const ort = await import("onnxruntime-web");
+      // wasm-only entry: ~14 MB wasm binary instead of the 28 MB all-backends "jsep" build.
+      const ort = await import("onnxruntime-web/wasm");
       // Single-threaded wasm: the threaded build needs SharedArrayBuffer / cross-origin
       // isolation. One thread is plenty for a ~420 KB model, one inference per shot.
       ort.env.wasm.numThreads = 1;
