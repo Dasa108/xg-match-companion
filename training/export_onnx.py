@@ -17,6 +17,7 @@ Run after train.py + evaluate.py.
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import lightgbm as lgb
@@ -131,12 +132,17 @@ def build_fixtures(booster: lgb.Booster, calibrators: dict, n: int) -> dict:
                 mb = S.apply_bucket_mask(one, keep_groups=keep)
                 # round the encoded row first, then predict from it, so the fixture is
                 # internally consistent (the TS port feeds the same rounded row to ONNX).
-                mrow = [round(float(v), 6) for v in E.encode_matrix(mb)[0].tolist()]
-                r = float(booster.predict(np.array([mrow], dtype=np.float32))[0])
+                # NaN -> null so the file stays valid JSON.
+                enc = E.encode_matrix(mb)[0].tolist()
+                mrow = [None if math.isnan(v) else round(float(v), 6) for v in enc]
+                pred_in = np.array([[np.nan if v is None else v for v in mrow]], dtype=np.float32)
+                # raw + xg at full precision, computed from the (rounded) row that is
+                # stored, so `interp(stored_raw)` reproduces `stored_xg` exactly in the port.
+                r = float(booster.predict(pred_in)[0])
                 buckets[bucket] = {
                     "row": mrow,
-                    "raw": round(r, 6),
-                    "xg": round(float(apply_cal(calibrators[bucket], np.array([r]))[0]), 6),
+                    "raw": r,
+                    "xg": float(apply_cal(calibrators[bucket], np.array([r]))[0]),
                 }
             cases.append({
                 "shot_id": ev.get("id"),

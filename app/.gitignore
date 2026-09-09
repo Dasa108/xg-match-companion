@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.local
+
+# synced in by scripts/sync-assets.mjs from ../models and ../training
+public/model/
+public/ort/
+src/xg/__fixtures__/

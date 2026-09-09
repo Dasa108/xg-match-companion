@@ -37,7 +37,8 @@ def main() -> None:
 
     # stack every (case, bucket) row, run ONNX once
     flat = [(c["shot_id"], b, d) for c in fx["cases"] for b, d in c["buckets"].items()]
-    rows = np.array([d["row"] for _, _, d in flat], dtype=np.float32)
+    rows = np.array([[np.nan if v is None else v for v in d["row"]] for _, _, d in flat],
+                    dtype=np.float32)
     out = sess.run([prob_name], {"input": rows})[0]
     raw = out[:, 1] if out.ndim == 2 else out.ravel()
 
