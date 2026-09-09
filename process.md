@@ -103,7 +103,276 @@ near the byline has a tiny target; 6 m out but central sees the whole goal. Ever
 
 ---
 
-## Phase 1 — Model (M1)
+## Phase 1 — Model (M1)  ✅ complete 2026-09-10
 
-> Not started. Entries will be appended here as work happens: environment setup, data pull,
-> feature code, baseline, main model, calibration, evaluation, ONNX export.
+**End state.** `training/` holds a reproducible pipeline: `pull_data.py` → `build_dataset.py`
+→ `train.py` → `evaluate.py` → `export_onnx.py`, with `check_fixtures.py` as the serving
+parity reference. Ships `models/model.onnx` (422 KB) + `feature_spec.json` +
+`calibrators.json`. Held-out test (4,988 shots): full-input log loss 0.263, AUC 0.805,
+calibration-in-the-large 1.03, correlation with StatsBomb's own xG 0.90. Release gate PASS.
+
+### 1.1 Python environment
+
+**What.** `python3 -m venv training/.venv`; installed numpy, pandas, scikit-learn, lightgbm,
+requests, tqdm, then the ONNX stack (onnx, onnxruntime, skl2onnx, onnxmltools), then
+matplotlib, shap, pyarrow. Pinned exact versions to `training/requirements.lock.txt`.
+
+**Why.** A venv isolates the project from the machine's conda base. A *lock file* (exact
+`==` versions from `pip freeze`) means "clone this in a year and get the same numbers";
+`requirements.txt` keeps loose lower bounds for humans.
+
+**How.** The machine had Python **3.14.6** — very new. Risk: binary wheels (lightgbm,
+onnxruntime) might not exist for 3.14 yet. Checked by just installing and importing; all
+current (numpy 2.5, pandas 3.0, lightgbm 4.7, onnxruntime 1.29). If a wheel had been
+missing the fallback was `conda create -n xg python=3.12`.
+
+**Learn.**
+- Test the *whole* dependency stack up front, before writing code against it. The one most
+  likely to break (here: ONNX on a bleading-edge Python) is the one to check first.
+- Two requirements files: loose for humans, locked for reproduction.
+
+### 1.2 Pulling the training data (`pull_data.py`)
+
+**What.** Downloaded StatsBomb Open Data: `competitions.json` → per-competition match lists
+→ per-match event streams. Cached as raw JSON under `training/data/raw/`. A curated default
+selection of 17 competition-seasons (tournament-heavy, men + women, several continents),
+plus an opt-in `--extra-leagues` for three full domestic-league seasons. Ended with **1,374
+matches, ~4.1 GB**.
+
+**Why these choices.**
+- **Curated, not "everything".** The open data is dominated by one team's league matches
+  (Barcelona / Messi). Loading all of it would skew the shot mix and cost far more disk.
+  Tournaments give a diverse, team-agnostic sample — right for an xG model that must not
+  encode "this team".
+- **Cache raw, resumable.** Each file is written to disk on first fetch; re-runs skip what
+  exists. A 1,374-file download *will* be interrupted; make that a non-event.
+- **Retry with backoff.** `urllib3.Retry(total=5, backoff_factor=0.6, status_forcelist=(429,
+  500,502,503,504))` on the session — transient GitHub 5xx/429s recover by themselves.
+- **Parallel but polite.** `ThreadPoolExecutor(max_workers=8)` — I/O-bound work, 8 is plenty
+  and doesn't hammer the host.
+
+**Learn.**
+- A data-pull script's real job is *idempotence and resumability*, not raw speed. Cache
+  keyed by the natural id (match_id), skip-if-exists, retry transient errors.
+- Keep the selection **declarative and readable** — `(competition_id, "2022")` pairs
+  resolved against `competitions.json` at runtime, not magic season-id integers in code.
+
+**Gotchas.**
+- StatsBomb reuses one `season_id` across competitions for the same calendar season (Euro
+  2024 and Copa América 2024 are both `season_id 282`). Resolve by `(competition_id,
+  season_name)`, never `season_id` alone.
+- `tqdm` writes carriage-return progress to stderr; `... 2>&1 | tail` then floods you with
+  every progress frame. Run long jobs with `TQDM_DISABLE=1` or `nohup ... > log 2>&1 &` and
+  `grep` the summary line.
+
+### 1.3 One shot → one row (`features.py`, `encode.py`)
+
+**What.** `features.py` is a **pure** module (stdlib + `math` only): `shot_geometry(x, y)`,
+`freeze_frame_features(...)`, and `build_shot_row(event, key_pass, prev_event)` which maps a
+StatsBomb shot event to a flat feature dict + label. `encode.py` (pandas/numpy) turns the
+feature table into an all-numeric matrix. `build_dataset.py` walks every raw event file and
+writes `data/processed/shots.parquet` — **34,809 shots, 9.6% conversion, 100% with freeze
+frames, 72% with a detectable assist**.
+
+**Why it's split this way.**
+- **Purity = portability.** The exact geometry/freeze-frame maths has to run again in
+  TypeScript in the browser. A module with no pandas, no I/O, no globals is one you can port
+  line-for-line and pin with fixtures. Anything pandas-shaped lives in `encode.py`, which
+  the browser does differently anyway.
+- **Coordinate system: StatsBomb 120×80 units, not metres.** The spec originally said
+  rescale to 105×68 m. Dropped that: the data is native in 120×80, an 8-unit goal doesn't
+  scale to 7.32 m cleanly, and the browser only has to map a tap into the *same* frame — the
+  physical unit is irrelevant. Fewer transforms = fewer places to disagree.
+- **Angle via the law of cosines**, not `atan2`: `acos((a²+b²−c²)/(2ab))` with the argument
+  clamped to `[−1,1]`. Same value, but unambiguous and hard to get subtly wrong.
+- **One-hot the categoricals into fixed columns** (`encode.py`) rather than use LightGBM's
+  native categorical splits. Reason: ONNX export of categorical splits is fragile; an
+  all-numeric model converts cleanly and the browser encoding becomes "set one dummy to 1,
+  or all-zero if unknown". A dropped feature group is then just "all its dummies 0 / its
+  numerics NaN" — an unambiguous "not provided".
+- **Feature groups** (`core`, `freeze_frame`, `assist`, `technique`, `context`,
+  `pass_origin`) are declared once in `FEATURE_GROUPS` and drive both training-time dropout
+  and the completeness buckets. One definition, used everywhere.
+
+**Excluded, deliberately.** StatsBomb ships `shot.statsbomb_xg` (kept only as an evaluation
+yardstick, never a feature), and post-contact fields like `shot.deflected` / `end_location`
+(those are post-shot information → PSxG, not pre-shot xG). Penalties are dropped from the
+table entirely and handled as a constant 0.76 downstream.
+
+**Learn.**
+- Decide the serve-time story *before* writing features. "This has to run in a browser in
+  TypeScript" is why the module is pure, why categoricals are one-hot, and why there's a
+  fixtures file. Retrofitting any of that is painful.
+- Sanity-check the built dataset immediately: conversion rate ≈ 9–10% ✓, and **Σ
+  StatsBomb-xG / goals ≈ 1.00** ✓ — that one number confirms the label extraction and the
+  join are correct before a single model is trained.
+
+**Gotchas.**
+- The assisting pass isn't on the shot — it's a *separate event* linked by
+  `shot.key_pass_id`. Build an `{id: event}` map for the match and look it up; that's where
+  `assist_type` and the pass-origin location come from.
+- StatsBomb flags like `first_time` / `one_on_one` are present only when *true* (absent =
+  false). That absent-means-false is real information; "operator didn't say" (NaN) is a
+  *different* state. The dataset stores the real value; dropout later injects the NaN.
+
+### 1.4 Split, dropout, jitter (`datasplit.py`)
+
+**What.** `assign_split` puts each shot in train / val / calib / test by a deterministic
+hash of `match_id`. `build_training_matrix` augments each training row into 5 copies: one
+full, one fully-blanked (`minimal`), and three with independent per-group random dropout +
+positional jitter. `apply_bucket_mask` / `random_dropout` / `jitter_freeze_frame` are the
+primitives.
+
+**Why.**
+- **Split by match, not by shot.** Two shots from the same match are correlated (same teams,
+  same conditions); splitting them across train/test leaks. Hashing `match_id` is stable
+  across runs — re-run training and the test set doesn't move.
+- **Feature-group dropout is how one model covers every input level.** LightGBM already
+  handles missing values; dropout during training *teaches* it to, by showing it the same
+  shot with the freeze-frame gone, or the assist gone, etc. The augmented set (~108k rows
+  from ~22k) makes "minimal inputs" a first-class case, not an afterthought.
+- **Jitter** (σ ≈ 1.7 units ≈ 1.5 m on the distance features) models the reality that a
+  sideline tap is not a motion-capture coordinate. *Approximation used:* noise added to the
+  derived distance features, not re-computed from jittered raw positions — the proper
+  version (keep raw coords, recompute) is a noted v2 improvement.
+
+**Learn.**
+- Grouped splitting is not optional for event data. If rows share a latent cause, group on
+  it.
+- If your model must tolerate missing / noisy inputs at serve time, **train it on missing /
+  noisy inputs** — don't just hope `NaN` handling saves you.
+
+### 1.5 The split-methodology bug (worth its own entry)
+
+**What happened.** First version held out *whole competitions* for test (WC 2022, WWC 2019,
+FA WSL 18/19) — "score it on tournaments it's never seen". Metrics came back with
+**calibration-in-the-large ≈ 0.91–0.95** (model under-predicting total goals by 5–9%),
+failing the spec's 0.95–1.05 gate, even though log loss / AUC / Brier all passed.
+
+**Why.** Those held-out competitions convert at ~0.10–0.11; the training + calibration data
+sat at ~0.091. An isotonic calibrator fit on 9.1%-conversion data and applied to
+10.5%-conversion data *will* under-predict. The whole-competition holdout had baked a
+**base-rate shift** between the calibration set and the test set.
+
+**Fix.** Switched to a match-level hash split so every competition appears in every split →
+train and test are the same population → calibration is meaningful again
+(cal-in-large 1.02–1.04). Kept the "unseen competition" idea as a *reported diagnostic*:
+`evaluate.py` prints per-competition xG/goals and AUC on the test set.
+
+**Learn.**
+- **Calibration is a property relative to a population.** Check it on data drawn like the
+  data you calibrated on. Check *ranking* (AUC) and *generalisation* on genuinely unseen
+  slices — those are what a distribution-shifted holdout actually tests.
+- A metric failing while related metrics pass is a clue about *which* stage is wrong (here:
+  discrimination fine, calibration off → the calibration data was the problem).
+
+### 1.6 Baseline, model, calibration (`train.py`)
+
+**What.**
+- **Baselines:** logistic regression on `{distance, angle}` (test log loss 0.274) and on
+  `+ body_part + shot_type + play_pattern` one-hots. The bar.
+- **Model:** `LGBMClassifier`, 4000 trees w/ early stopping (stopped ~290), `lr 0.02`,
+  `num_leaves 31`, `max_depth 5`, `min_child_samples 60`, subsample/colsample 0.8,
+  `reg_lambda 1`, **monotone constraints** (xG ↓ in distance & defenders-in-cone, ↑ in
+  angle & nearest-defender-distance & one-on-one & open-goal), trained on the augmented
+  matrix, early-stopped on a val set mirrored across completeness levels.
+- **Calibration:** `IsotonicRegression` per bucket, fit on `calib ∪ val` (both unseen by
+  the model), each masked to that bucket. Stored as `{x: knots, y: knots}` in
+  `calibrators.json` for a trivial `interp` at serve time.
+
+**Why.**
+- **Baseline first, always.** If the GBM can't beat `distance + angle` logistic, something
+  is wrong with the features or the target, and you want to know that in 2 seconds.
+- **Monotone constraints** buy robustness and trust for free: the model *cannot* learn
+  "further out = higher xG" from a noisy data pocket, and the app can defend every number.
+- **No oversampling.** The classes are ~9:1 but log loss on the true distribution is exactly
+  what we want to minimise; resampling would distort the probabilities and force a
+  re-calibration anyway.
+- **Calibrate on held-out, not on train.** The model's predictions on its own training rows
+  are optimistic; calibration must see out-of-sample scores or it learns the wrong mapping.
+
+**Learn.**
+- The pipeline order is load → **baseline** → augment → fit w/ early stopping → **calibrate
+  on held-out** → evaluate on frozen test. Each stage has a guard you can eyeball.
+- Persist everything the serve path needs as *data*, not code: `feature_spec.json` (column
+  order, vocabularies, buckets, monotone list), `calibrators.json` (knots). The browser
+  never re-implements training, only this.
+
+### 1.7 Evaluation & the release gate (`evaluate.py`, `models/metrics.md`)
+
+**What.** On the frozen test set, for each of `minimal` / `partial` / `full` (test rows
+masked to that level): log loss, Brier, ROC-AUC, PR-AUC, ECE (10-bin), calibration-in-the-
+large, correlation vs StatsBomb xG, "beats baseline?", reliability diagram PNG, error by
+distance band, and xG/goals + AUC per competition. Writes a human-readable `metrics.md` with
+a **PASS/FAIL against every spec §8.6 threshold** and a monotonic-quality check.
+
+**Result:** every cell passes. `full`: LL 0.263 / Brier 0.071 / AUC 0.805 / ECE 0.013 /
+cal 1.03 / corr 0.90. `partial` and `minimal` also pass. Monotone: AUC & Brier strictly
+ordered `full > partial > minimal`; log loss ordered within a ±0.004 tolerance (it's noisy
+on ~5k rows — the tolerance is deliberate and documented).
+
+**Learn.**
+- Bake the acceptance thresholds into a script that prints ✓/✗, so "is the model good
+  enough?" is not a judgement call each time. Re-runnable, diffable, hard to fudge.
+- Report **per-slice** (distance band, competition), not just the headline. The headline can
+  hide a band that's badly wrong.
+
+### 1.8 Export for the browser (`export_onnx.py`, `check_fixtures.py`, `models/serving.md`)
+
+**What.** `convert_lightgbm(booster, FloatTensorType([None, N]), zipmap=False)` →
+`models/model.onnx` (422 KB). Verified: ONNX vs LightGBM raw probability agree to **1.9e-7**
+across all buckets including NaN rows. Wrote `feature_fixtures.json`: 48 real shots ×
+3 buckets, each with the feature dict, the exact encoded row, the model `raw`, and the
+calibrated `xg`. `check_fixtures.py` re-derives all of it from *only* the three shipped
+files — the reference the TS port must match (`raw` to 1e-5, `xg` to 1e-4).
+
+**Why.**
+- **onnxruntime-web** runs this file in the browser with no server — the pitchside offline
+  requirement. An all-numeric model is why the conversion is clean.
+- **A parity fixture set is the contract** between the Python training code and the
+  TypeScript serving code. Without it, "the browser xG is a bit different from the notebook"
+  becomes an un-debuggable complaint. With it, CI fails on the exact case that diverged.
+
+**Gotchas.**
+- Fixtures must be *internally consistent*. First cut stored one full-precision row and
+  per-bucket predictions computed from *un-rounded* features → re-predicting from the
+  rounded stored row disagreed by ~2e-4 (a tree split boundary flips under a 1e-6 nudge).
+  Fix: round the row first, then predict from the rounded row, and store both.
+- The calibrated `xg` carries one extra piecewise-linear step whose knots can be steep, so
+  its parity tolerance (1e-4) is looser than the model `raw` (1e-5). Still far below any
+  xG precision anyone reports.
+
+### 1.9 Repo hygiene
+
+**What.** `.gitignore` (venv, `data/raw`, `data/processed`, `artifacts` — all regenerable),
+`git init`, committed M1 on branch `m1-model`. Tracked footprint: ~1.4 MB (code + the
+422 KB model + JSON), not the 4 GB of raw JSON.
+
+**Learn.** Commit the *recipe and the result* (scripts + released model + metrics), never
+the *scratch* (raw downloads, venv, intermediate parquet). Anyone can regenerate the scratch
+from `pull_data.py`.
+
+---
+
+### How to reproduce M1 from scratch
+
+```bash
+cd training
+python3 -m venv .venv && .venv/bin/pip install -r requirements.lock.txt
+.venv/bin/python pull_data.py --extra-leagues     # ~4 GB, resumable
+.venv/bin/python build_dataset.py                 # -> data/processed/shots.parquet
+.venv/bin/python train.py                         # -> ../models/{model.txt,calibrators,feature_spec}
+.venv/bin/python evaluate.py                      # -> ../models/metrics.md  (check: gate PASS)
+.venv/bin/python export_onnx.py                   # -> ../models/model.onnx + feature_fixtures.json
+.venv/bin/python check_fixtures.py                # serving-path parity (must pass)
+```
+
+### Open items carried into M2
+
+- Positional jitter is approximate (noise on derived distances). Proper version: persist raw
+  freeze-frame coords, recompute features under jitter. v2.
+- `feature_fixtures.json` needs its TypeScript counterpart test in `app/` (M2).
+- SHAP-based `reason` strings (spec §8.5 step 6) not built yet — deferred to M2/M3 where the
+  UI consumes them.
+- `models/model.txt` is committed for now (692 KB, human-diffable); could switch to
+  ONNX-only once the TS path is trusted.

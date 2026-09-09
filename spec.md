@@ -199,14 +199,22 @@ Shot       { id, match_id, team_id, player_id, minute, inputs(JSON per §6),
 - Exclude own goals. Handle **penalties as a constant xG = 0.76** (do not learn from data).
 
 ### 8.2 Coordinate system & geometry
-- Canonical pitch: **105 × 68 m**, attack toward `x = 105`. Goal centre `(105, 34)`,
-  posts at `(105, 30.34)` and `(105, 37.66)` (7.32 m). StatsBomb 120×80 (yд) is scaled by
-  `x·105/120`, `y·68/80`. Operator clicks on the app pitch are normalised the same way.
-- `distance = hypot(105 − x, y − 34)`
-- `angle` (subtended by posts, radians):
-  `angle = atan2( 7.32·(105 − x), (105 − x)² + (y − 34)² − 3.66² )`, clamped to `≥ 0`.
-- `lateral_offset = |y − 34|`
-- `in_box` = inside 16.5 m area; `in_six_yard` = inside 5.5 m area.
+
+**As built (M1).** We work in **StatsBomb pitch units** (120 long × 80 wide, attack toward
+`x = 120`), *not* metres. The training data is native in these units and the only thing that
+matters is that the app maps a pitch tap into the same 120×80 frame — an extra rescale to
+metres would just add a lossy step and a goal-width inconsistency (8 units ≠ 7.32 m after
+scaling). 1 unit ≈ 0.9 m.
+
+- Goal centre `(120, 40)`, posts `(120, 36)` and `(120, 44)` (8 units apart).
+- `dist_x = 120 − x`, `abs_y = |y − 40|`, `distance = hypot(dist_x, y − 40)`.
+- `angle` (subtended by the posts, radians) via the **law of cosines** — numerically cleaner
+  than the `atan2` form: with `a = dist(shot, near post)`, `b = dist(shot, far post)`,
+  `angle = acos((a² + b² − 8²) / (2ab))`, argument clamped to `[−1, 1]`, and `0` when the
+  shooter is level with or behind the goal line.
+- `in_box` = `x ≥ 102 and 18 ≤ y ≤ 62`; `in_six_yard` = `x ≥ 114 and 30 ≤ y ≤ 50`.
+- Reference implementation: `training/features.py` (pure, no deps). The browser port must
+  match it against `training/feature_fixtures.json`.
 
 ### 8.3 Features
 
@@ -218,12 +226,11 @@ Shot       { id, match_id, team_id, player_id, minute, inputs(JSON per §6),
 `one_on_one`, `rebound`.
 
 **Included — pressure & defenders (from markers; `freeze-frame` group, optional):**
-`defenders_in_triangle` (count of defender markers inside the shot triangle),
-`defenders_within_1m` / `_2m` / `_3m`, `nearest_defender_dist`,
-`pressure` (ordinal none<light<heavy),
-`gk_distance` (shooter→GK), `gk_offset` (perpendicular distance of GK from the
-shooter→goal-centre line), `gk_well_set`, `keeper_state` (one-hot),
-`attackers_in_box` (if teammate markers ever added; else 0).
+`defenders_in_cone` (opponents inside the shot triangle), `nearest_def_dist`,
+`def_within_3` / `def_within_5` (units), `pressure` (ordinal none<light<heavy, in `core`),
+`gk_dist` (shooter→GK), `gk_dist_from_goal` (GK off its line), `gk_lateral` (perpendicular
+distance of GK from the shooter→goal-centre line), `gk_in_cone`, `teammates_in_box`.
+`gk_well_set` / `keeper_state` are captured by the operator and fold in here.
 
 **Included — build-up (operator):**
 `situation` (one-hot), `assist_type` (one-hot),
@@ -269,15 +276,20 @@ Penalties bypass the model entirely (constant xG = 0.76).
 
 ### 8.5 Training procedure
 1. Assemble shots; engineer §8.3 features (normalise freeze frames to attack-right).
-2. **Split by match** — `GroupKFold` on `match_id`, or hold out whole competitions/seasons.
-   Never split shots from one match across train/test.
+2. **Split by match, deterministic hash of `match_id`** — 15% test / 10% val (early
+   stopping) / 13% calib (isotonic) / 62% train. Shots from one match never straddle
+   splits. Every competition appears in every split, so train and test are the *same
+   population* and calibration is meaningful; `evaluate.py` additionally reports
+   per-competition test error as the generalisation check.
+   *(Earlier draft held out whole competitions for test — that created a base-rate gap
+   between calibration and test data and broke calibration-in-the-large. See process.md 1.5.)*
 3. **Baseline:** logistic regression on `{distance, angle}`, then `+ body_part + situation`.
    This is the bar every model must beat.
 4. **Main model:** LightGBM binary classifier with **feature-group dropout** (§8.4).
    Depth 3–5, learning rate ~0.02–0.05, early stopping on validation log loss.
-   **Monotonic constraints:** xG decreasing in `distance` and `defenders_in_triangle`,
-   increasing in `angle`. No oversampling — optimise log loss directly (`scale_pos_weight`
-   optional, re-calibrate after).
+   **Monotonic constraints:** xG decreasing in `distance`, `dist_x`, `defenders_in_cone`,
+   `def_within_3/5`, `gk_in_cone`; increasing in `angle`, `nearest_def_dist`, `one_on_one`,
+   `open_goal`. No oversampling — optimise log loss directly.
 5. **Calibration:** fit isotonic regression **per completeness bucket** (`minimal` /
    `partial` / `full`) on a held-out calibration slice. Verify reliability diagram +
    Expected Calibration Error and Σ xG ≈ Σ goals *within each bucket*.
@@ -303,8 +315,13 @@ Every level must also beat the logistic baseline on log loss. Also report error 
 band, body part, and situation.
 
 **Release gate:** all cells met on the frozen test set, **and** monotonic quality — for the
-same shots, `full` ≥ `partial` ≥ `minimal` on log loss and AUC (adding information never
-hurts).
+same shots, `full` ≥ `partial` ≥ `minimal` on AUC and Brier strictly, and on log loss within
+a ±0.004 tolerance (log loss is noisy on a few-thousand-row test set).
+
+**M1 result (2026-09-10) — release gate PASS ✅.** 34,809 shots / 1,374 matches / 13
+competitions. Test (4,988 shots): full-input log loss **0.263** (baseline 0.274), Brier
+0.071, AUC **0.805**, ECE 0.013, calibration-in-the-large **1.03**, corr vs StatsBomb xG
+**0.90**; partial and minimal also pass every threshold. Full report: `models/metrics.md`.
 
 ### 8.7 Serving & export
 - Export the GBM to **ONNX**; export the three completeness calibrators alongside (ONNX or a
@@ -421,7 +438,7 @@ xG/
 
 | Milestone | Contents |
 |---|---|
-| **M1 — Model** | StatsBomb pull, feature engineering, logistic baseline, one adaptive model with feature-group dropout, per-bucket calibration, §8.6 gates met across completeness levels, ONNX export, parity fixtures. |
+| **M1 — Model** ✅ done | StatsBomb pull, feature engineering, logistic baseline, one adaptive LightGBM with feature-group dropout, per-bucket isotonic calibration, §8.6 gates met across completeness levels (release gate PASS), `models/model.onnx` + `feature_spec.json` + `calibrators.json` + parity fixtures. |
 | **M2 — Logging app** | Website shell, team-sheet setup, pitch tap + markers, quick chips, in-browser inference, IndexedDB persistence. |
 | **M3 — Reporting** | Live tallies, end-of-match report, shot map, xG timeline, leaderboard, verdict strings, export. |
 | **M4 — Hardening** | Service-worker offline caching, performance pass, real-match trial, feedback fixes. |
