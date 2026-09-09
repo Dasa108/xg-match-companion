@@ -661,7 +661,62 @@ clean; `npm run build` + 356 tests still green.
   its assets. The override existed to force offline loading; the bundler does that anyway
   (assets land in `dist/assets/` and get precached by the service worker later).
 
-**Still to do in M4** (unchanged): full manual click-through (extension dropped
-mid-session — retry when stable), trim the 27 MB `ort-wasm-simd-threaded.jsep` bundle,
-service worker for offline, the remaining optional-detail inputs in `ShotEntry`,
-performance pass, real-match trial.
+### 4.2 Second browser bug: the threaded-wasm freeze
+
+**What.** With the `public/` import fixed, the app mounted — but the moment code reached
+the model load, the **renderer froze hard** (30 s CDP timeouts, no console output). The
+list and setup screens were fine; it locked up on the Live screen / on `warmModel()`.
+
+**Why.** The default `onnxruntime-web` entry pulls the *multi-threaded* wasm build, which
+needs `SharedArrayBuffer` → which needs cross-origin isolation (`COOP`/`COEP` headers) the
+dev server doesn't send. On a non-isolated page it doesn't error cleanly — it spins trying
+to stand up its worker pool and wedges the main thread. `model.node.test.ts` never sees
+this: `onnxruntime-node` is a native addon, no wasm threads.
+
+**Fix.**
+- `ort.env.wasm.numThreads = 1` + `proxy = false` — no `SharedArrayBuffer`, no worker.
+  A 420 KB model doing one inference per shot does not need threads.
+- `await import("onnxruntime-web")` **dynamically inside `load()`** instead of a top-level
+  import. It now code-splits into its own ~414 KB chunk; the main bundle dropped
+  694 KB → 277 KB, and the match-list / setup screens never download it.
+- `warmModel()` moved from `App` mount to `LiveScreen` mount — the model loads when you
+  kick off, not when you open the app.
+
+**Learn.**
+- `onnxruntime-web` defaults to the threaded build. On any page without COOP/COEP, set
+  `numThreads = 1` or it will hang, not fail.
+- A heavy dependency behind a screen you don't always visit belongs behind a dynamic
+  `import()`. Free code-splitting, and the failure mode (if any) is scoped to that screen.
+- Two browser bugs in the first two loads, both invisible to a green 356-test suite,
+  both in the model-loading path. Headless coverage of "the maths" is not coverage of
+  "the runtime in the real environment".
+
+### 4.3 Full manual walk-through — passed
+
+Ran the whole flow in Brave via the extension:
+
+| step | result |
+|---|---|
+| Create match | persisted, appears in the list |
+| Team sheets | add players + numbers, XI/sub toggle, live count |
+| Kick off | Live screen, model loads with **no freeze** |
+| Tap pitch | live **0.25 xG**, band 0.19–0.31, reason "close range", bucket `minimal` |
+| Body part → head | xG drops to **0.16** — model responds |
+| Drop keeper + defender | bucket `minimal → partial`, reason gains "the keeper off his line" |
+| Pick shooter + outcome, Save | scoreboard → Rovers 1, 0.16 xG, 1 sh |
+| Second shot (City) + Save | shot log shows both, reverse-chronological |
+| Full time | Report: **1–0**, xG 0.16–0.37, verdict *"Even game on chances — Rovers took theirs."* |
+| Report charts | xG timeline (step lines + legend), shot map (dots ∝ xG, goal gold), chance-quality histogram |
+| Player table | Cy Dunn −0.37 (red), Ada Owen +0.84 (green); "Best xG: Cy Dunn" |
+| Export | JSON + CSV buttons present (logic already unit-tested) |
+
+**Minor UX notes for later:** `reset()` after save keeps body-part / situation / pressure
+from the previous shot (deliberate — they're often the same — but "head" carrying over
+surprised me once); the pitch is full-width and very tall on a desktop viewport (it's a
+phone-first layout, fine on a phone); the xG-timeline step lines hug the axis with only
+two early shots (fine once shots spread across 90′).
+
+**Still to do in M4:** trim the 27 MB `ort-wasm-simd-threaded.jsep` (the wasm binary is
+still the all-backends/WebGPU build even though we only use the wasm EP — switch to a
+wasm-only import); service worker for offline; the remaining optional-detail inputs in
+`ShotEntry`; a real-match trial.
