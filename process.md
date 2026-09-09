@@ -625,3 +625,43 @@ npm run dev        # http://localhost:5173  — sync-assets runs first
 npm test           # 356 parity + lifecycle + report tests
 npm run build      # type-check + production bundle in dist/
 ```
+
+---
+
+## Phase 4 — Hardening (M4)  🚧 in progress
+
+### 4.1 First real browser load caught a fatal bug
+
+**What.** Loaded the dev app in a browser (Brave, via the Claude-in-Chrome extension) for
+the first time. It showed Vite's red error overlay and never mounted:
+
+> Failed to load url /ort/ort-wasm-simd-threaded.jsep.mjs … This file is in /public and
+> will be copied as-is during build without going through the plugin transforms, and
+> therefore should not be imported from source code.
+
+**Why.** `sync-assets.mjs` copied onnxruntime-web's `.wasm` **and** `.mjs` into
+`public/ort/`, and `model.ts` set `ort.env.wasm.wasmPaths = "/ort/"`. At runtime ort does a
+dynamic `import()` of its `.mjs` glue from that path — but Vite's dev server refuses to
+serve a `public/` file through the module pipeline. The all-headless tests never hit this:
+`onnxruntime-node` (used in `model.node.test.ts`) loads its runtime a completely different
+way.
+
+**Fix.** Delete the `wasmPaths` override and the `public/ort` copy; let the bundler resolve
+onnxruntime-web's own assets (`optimizeDeps.exclude: ["onnxruntime-web"]` was already in
+place, and Vite/Rollup handle the `new URL(…, import.meta.url)` inside ort). App mounts
+clean; `npm run build` + 356 tests still green.
+
+**Learn.**
+- **Files in `public/` are copied verbatim — never `import` them.** They're for `<img src>`
+  / `<link href>` style references by URL, not for code the bundler needs to touch.
+- A green headless suite is not "it works". The node ONNX runtime and the browser wasm
+  runtime load by different mechanisms; only a real browser exercises the second. This is
+  exactly why M2 planned a manual pass — the first one paid for itself immediately.
+- Don't hand a library a hard-coded asset path when the bundler already knows how to place
+  its assets. The override existed to force offline loading; the bundler does that anyway
+  (assets land in `dist/assets/` and get precached by the service worker later).
+
+**Still to do in M4** (unchanged): full manual click-through (extension dropped
+mid-session — retry when stable), trim the 27 MB `ort-wasm-simd-threaded.jsep` bundle,
+service worker for offline, the remaining optional-detail inputs in `ShotEntry`,
+performance pass, real-match trial.
