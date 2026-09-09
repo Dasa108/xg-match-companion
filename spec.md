@@ -90,8 +90,11 @@ produces a conclusion:
 
 ### 5.2 In-match shot entry flow
 1. Operator taps **"New shot"**.
-2. **Pitch view** (SVG, attacking direction fixed left→right, half-pitch zoom near the goal):
-   operator taps the shot location. A shooter marker appears; can be dragged.
+2. **Pitch view** — **as built: the whole pitch**, drawn portrait (both boxes, both D
+   arcs, halfway line, centre circle) with the team in possession attacking **upward**.
+   Tool row = shot / keeper / defender / pass. Operator taps the shot location; then
+   switches tool to drop the keeper, defenders, or the pass origin. Capped at 64vh so it
+   doesn't swallow a phone screen. (`app/src/pitch/`.)
 3. **Shooter attribution**: pick team (toggle) + player (list of that team's on-pitch players,
    searchable by number). Required.
 4. **Quick chips** (single tap each, sensible defaults pre-selected):
@@ -102,12 +105,12 @@ produces a conclusion:
 5. **Markers (optional — add the freeze-frame group)**: drag the **GK marker** onto the pitch; toggle
    `keeper well set` yes/no. Drop up to **6 defender markers** near the shooter. Optionally
    drop a **pass-origin marker** where the assist came from.
-6. **Optional detail** (collapsed by default): first-time shot y/n · technique
-   (`ground` / `low-driven` / `half-volley` / `volley` / `overhead` / `lob`) ·
-   preceded by take-on y/n · one-on-one y/n · rebound/loose ball y/n ·
-   assist type (`through ball` / `high cross` / `low cross / cutback` / `pull-back` /
-   `lay-off` / `own dribble` / `set-piece delivery` / `none`) · keeper state
-   (`set` / `advancing` / `off line` / `beaten` / `on ground` / `unsighted`).
+6. **Optional detail** — as built: `assist type` (none / cross / through ball / cutback /
+   low pass / high pass) and `first-time` / `one-on-one` are always visible; a
+   **"+ more detail"** toggle reveals `technique` (normal / volley / half-volley / lob /
+   overhead), `beat a defender`, `open goal`, `rebound`, and a hint to use the **pass**
+   tool for the assist origin. `keeper state` is not a separate model input — the GK
+   marker position carries it.
 7. **Outcome**: `goal` / `saved` / `off target` / `blocked` / `post`. (Used for reporting and
    future retraining, **not** for the pre-shot xG computation.)
 8. Save. xG is computed instantly and shown with a one-line reason
@@ -458,7 +461,7 @@ xG/
 | **M1 — Model** ✅ done | StatsBomb pull, feature engineering, logistic baseline, one adaptive LightGBM with feature-group dropout, per-bucket isotonic calibration, §8.6 gates met across completeness levels (release gate PASS), `models/model.onnx` + `feature_spec.json` + `calibrators.json` + parity fixtures. |
 | **M2 — Logging app** ✅ done | `app/` (Vite + React + TS). TS port of the serve path (`src/xg/`), 340 parity tests vs `feature_fixtures.json`. Dexie/IndexedDB persistence, `setup → live → finished` lifecycle, team sheets, pitch tap + markers, quick chips, in-browser onnxruntime-web inference, live team + per-player tallies. *(Not yet clicked through in a real browser — headless tests + `vite preview` only.)* |
 | **M3 — Reporting** ✅ done | End-of-match report: FT score, xG verdict string (§9), player leaderboard + best-xG/efficiency picks, SVG shot map, cumulative xG timeline, chance-quality histogram; per-shot reason string + confidence band; JSON + CSV export. Pure logic in `src/xg/{verdict,report,reason,exportMatch}.ts`, all unit-tested (356 tests total). |
-| **M4 — Hardening** | Manual browser pass; trim the 27 MB onnxruntime-web bundle to the plain wasm backend; service-worker offline caching; expose the full optional-detail input set (§5.2 step 6); performance pass; real-match trial. |
+| **M4 — Hardening** 🚧 | ✅ manual browser pass (2 runtime bugs found+fixed); ✅ full pitch shown (portrait, both halves); ✅ onnxruntime-web trimmed to the wasm entry (28→14 MB wasm, 414→73 KB glue) + lazy-loaded; ✅ Workbox service worker precaches shell + model + wasm for full offline; ✅ full optional-detail inputs + pass-origin tool. **Remaining:** performance pass, real-match trial. |
 | **v2** | PSxG model + goal-mouth input, retraining loop, optional sync backend, game-state feature experiment. |
 
 ---

@@ -716,7 +716,63 @@ surprised me once); the pitch is full-width and very tall on a desktop viewport 
 phone-first layout, fine on a phone); the xG-timeline step lines hug the axis with only
 two early shots (fine once shots spread across 90′).
 
-**Still to do in M4:** trim the 27 MB `ort-wasm-simd-threaded.jsep` (the wasm binary is
-still the all-backends/WebGPU build even though we only use the wasm EP — switch to a
-wasm-only import); service worker for offline; the remaining optional-detail inputs in
-`ShotEntry`; a real-match trial.
+### 4.4 The whole pitch
+
+**What.** Replaced the cropped attacking-half view with a **full pitch, drawn portrait**,
+team-in-possession attacking upward — both penalty areas, both D arcs, halfway line,
+centre circle. New shared module `pitch/geometry.ts` (the model↔SVG transform) +
+`pitch/PitchMarkings.tsx` (the lines), used by both the shot-entry `Pitch` and the report
+`ShotMap` so they can't drift.
+
+**Why portrait.** A full 120×80 pitch is landscape (1.5:1); on a phone that leaves the
+shot zone ~130 px wide — too tight for placing defenders or judging angle. Rotated to
+portrait (80 wide × 120 tall) the attacking third gets the full screen width, which is
+where lateral precision actually matters. The model coordinate transform is then just an
+axis swap: `svg = (model.y, 120 − model.x)`.
+
+**Learn.** When two components draw "the same thing" (the entry pitch and the report shot
+map), factor the geometry + markings into one module the day you have two of them — not
+after they've diverged. Cap a full-bleed SVG with `max-height` + rely on
+`preserveAspectRatio` to letterbox it centred, rather than trying to compute a fitted size.
+
+### 4.5 Bundle trim + offline
+
+**Wasm.** `import("onnxruntime-web")` pulls the all-backends "jsep" build — a **28 MB**
+wasm even though we only use the wasm EP. Switched the dynamic import to
+`onnxruntime-web/wasm`: **14 MB** wasm, and the JS glue **414 KB → 73 KB**. (14 MB is this
+version's floor for the wasm EP; older ort had a smaller non-SIMD `ort-wasm.wasm` but
+that path is gone.)
+
+**Service worker.** `vite-plugin-pwa` (Workbox `generateSW`), `registerType: autoUpdate`,
+no install prompt. `globPatterns` widened to include `onnx` / `json` / `wasm`, and
+`maximumFileSizeToCacheInBytes` bumped to 20 MB so the wasm precaches. Result: **10
+entries, ~14 MB** — the shell, `model.onnx`, `feature_spec.json`, `calibrators.json`, the
+ort JS + wasm. Once the site has loaded online it runs fully offline.
+
+**Learn.** A default library entry point often bundles backends you'll never use — check
+the package's `exports` map for a narrower one (`/wasm`, `/core`, …). Service-worker
+precaching only runs in a real build (`vite preview`, not `vite dev`); verify the
+generated `sw.js` precache list actually contains the model + wasm.
+
+### 4.6 Full shot-detail inputs
+
+`ShotEntry` now exposes everything the model accepts: a **"+ more detail"** disclosure
+adds `technique`, `beat a defender` (follows_dribble), `open goal`, `rebound`; a new
+**"⟶ pass"** pitch tool drops the assist origin (dashed line to the shot) and puts the
+shot in the `full` completeness bucket. The context object carries all five flags now.
+A `computing xG…` placeholder shows on the first inference while the model warms.
+
+### 4.7 Browser re-verification
+
+Preview build in Brave: create match → team sheets → kick off → **full portrait pitch +
+the pass tool render, model loads with no freeze** → tap → xG. The Chrome extension was
+intermittently dropping screenshots all session (≈6 times — actions execute, the CDP
+`captureScreenshot` times out); retrying usually recovers. Not app-related — the app
+rendered fine every time a screenshot did come back.
+
+**Still open in M4:** a performance pass (first-inference latency on a real mid-range
+phone; the 14 MB wasm cold-download), and the real-match trial.
+
+**UX debt noted:** `reset()` keeps body-part / situation / pressure between shots
+(deliberate, but surprised me once); the xG-timeline hugs the axis with only a couple of
+early shots.
