@@ -473,10 +473,81 @@ check.
 *first*, on a throwaway screen. The CRUD around it (matches, players, storage) is
 well-trodden and can come after.
 
-### Still to build in M2
+### 2.6 Match lifecycle + persistence
 
-- Pre-match team-sheet entry (both XIs + subs), match create/finish lifecycle.
-- Dexie/IndexedDB schema + persistence of matches, players, shots.
-- Shot attribution to a named player; the full 25-second entry flow from spec §5.2.
-- Live per-team / per-player xG tallies.
-- Trim the onnxruntime-web bundle; add the service worker (M4).
+**What.** A `setup → live → finished` state machine backed by IndexedDB, plus the
+end-of-match analytics.
+
+- **`db/schema.ts`** — Dexie tables `matches` / `players` / `shots`. `createMatch`,
+  `startMatch`, `finishMatch`, `reopenMatch`, `deleteMatch` (cascades to players + shots
+  in one transaction). A start/pause match clock stored as
+  `clockAccumMs + (clockStartedAt ? now − clockStartedAt : 0)` so it survives reloads and
+  needs no timer in the DB.
+- **`db/hooks.ts`** — `useLiveQuery` wrappers; any write re-renders every screen showing
+  that data.
+- **`xg/verdict.ts`** (pure, unit-tested) — `teamAggs`, the spec §9 `verdictLine`
+  ("Deserved result" / "Smash-and-grab" / "should have won" / …), `playerLeaderboard`
+  (xG, xG/shot, biggest chance, goals, `G−xG`), `bestXgPlayer`, `efficiencyPick`
+  (≥ 3 shots).
+- **Screens** — `MatchListScreen` (create / open / delete), `SetupScreen` (two
+  `TeamSheet` editors → *Kick off*), `LiveScreen` (scoreboard with running team xG +
+  clock, `ShotEntry`, reverse-chronological shot log, *Full time*), `ReportScreen` (FT
+  score, xG line + verdict, player table, SVG shot map, *reopen*).
+- **`App.tsx`** — no router library; the screen is a pure function of `match.status`, and
+  the last-opened match id is kept in `localStorage` (wrapped in try/catch for private
+  mode).
+
+**Why.**
+- **Status is the single source of navigation truth.** `startMatch` flips the row to
+  `live`; the live query re-fires; `App` renders `LiveScreen`. No separate nav state to
+  keep in sync with the data.
+- **Team folded into Match.** Spec §7 lists a `Team` table, but there are always exactly
+  two and they're identified by `side`. `homeName`/`awayName` on the match + a `side` enum
+  on players/shots is less machinery for the same information. (Noted as a deliberate
+  deviation.)
+- **The clock is data, not a running timer.** Storing an anchor timestamp + accumulated ms
+  means a page reload, a backgrounded tab, or reopening the app all compute the right
+  minute with no drift.
+
+**Learn.**
+- Model elapsed time as `(anchor, accumulated)` rather than ticking a counter — the UI
+  timer becomes cosmetic (a 1 s interval just to repaint) and the truth is always
+  recomputable.
+- With a reactive store (Dexie live queries), "navigation" for a status-driven flow is
+  often just `switch (row.status)`. Reach for a router when URLs/back-button matter.
+- Put the analytics/verdict logic in a pure module and test it with hand-built rows —
+  the wording rules in spec §9 have several branches and are exactly the kind of thing
+  that rots silently.
+
+### 2.7 Testing without a browser
+
+The Claude-in-Chrome extension wasn't connected in this session, so the UI wasn't
+clicked through live. Covered instead by:
+- `db/schema.test.ts` — the full lifecycle (create → players → kick off → clock → shots →
+  aggregate → full time → reopen → delete-cascade) against `fake-indexeddb`.
+- `xg/verdict.test.ts` — every branch of the verdict string + the leaderboard maths.
+- `npm run build` type-checks all screens; `vite preview` + `curl` confirms the bundle
+  serves and `/model/*` + `/ort/*.wasm` resolve.
+- **350 tests total, all green.** Still worth a manual `npm run dev` click-through before
+  calling M2 done.
+
+### Still to build / polish in M2
+
+- Manual browser pass of the full flow.
+- Optional-detail inputs from spec §5.2 step 6 (technique, keeper-state, pass-origin
+  marker) — the model already accepts them; the UI only exposes a subset.
+- CSV/JSON export from the report.
+- Trim the 27 MB onnxruntime-web bundle to the plain wasm backend; add the service worker
+  (M4).
+
+---
+
+### How to run the app
+
+```bash
+cd app
+npm install
+npm run dev        # http://localhost:5173  — sync-assets runs first
+npm test           # 350 parity + lifecycle tests
+npm run build      # type-check + production bundle in dist/
+```
