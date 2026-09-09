@@ -59,13 +59,90 @@
   "assist_type=keeper_throw",
   "assist_type=recovery"
  ],
+ "feature_columns": [
+  "distance",
+  "angle",
+  "dist_x",
+  "abs_y",
+  "in_box",
+  "in_six_yard",
+  "body_part",
+  "shot_type",
+  "play_pattern",
+  "under_pressure",
+  "defenders_in_cone",
+  "nearest_def_dist",
+  "def_within_3",
+  "def_within_5",
+  "gk_dist",
+  "gk_dist_from_goal",
+  "gk_lateral",
+  "gk_in_cone",
+  "teammates_in_box",
+  "assist_type",
+  "technique",
+  "first_time",
+  "follows_dribble",
+  "one_on_one",
+  "open_goal",
+  "rebound",
+  "pass_origin_dist",
+  "angle_swing"
+ ],
  "cases": [
   {
    "shot_id": "3029016d-44e9-43f8-967c-7e2e19b1c9b6",
-   "location": [
-    103.0,
-    57.0
-   ],
+   "input": {
+    "x": 103.0,
+    "y": 57.0,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.0,
+      43.0
+     ],
+     "opponents": [
+      [
+       106.0,
+       37.0
+      ],
+      [
+       107.0,
+       57.0
+      ],
+      [
+       91.0,
+       37.0
+      ],
+      [
+       100.0,
+       55.0
+      ],
+      [
+       100.0,
+       51.0
+      ],
+      [
+       109.0,
+       52.0
+      ]
+     ],
+     "teammates_in_box": 1
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "none",
+    "pass_origin": null
+   },
    "features": {
     "distance": 24.041630560342615,
     "angle": 0.23742847102690756,
@@ -293,10 +370,60 @@
   },
   {
    "shot_id": "7c012a64-17fa-4ce4-882d-3601760e2a75",
-   "location": [
-    110.0,
-    49.0
-   ],
+   "input": {
+    "x": 110.0,
+    "y": 49.0,
+    "body_part": "head",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      117.0,
+      40.0
+     ],
+     "opponents": [
+      [
+       105.0,
+       48.0
+      ],
+      [
+       107.0,
+       35.0
+      ],
+      [
+       115.0,
+       50.0
+      ],
+      [
+       112.0,
+       36.0
+      ],
+      [
+       114.0,
+       40.0
+      ],
+      [
+       112.0,
+       47.0
+      ]
+     ],
+     "teammates_in_box": 2
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "cross",
+    "pass_origin": [
+     112.0,
+     73.0
+    ]
+   },
    "features": {
     "distance": 13.45362404707371,
     "angle": 0.4514530915525542,
@@ -524,10 +651,52 @@
   },
   {
    "shot_id": "adb3b7d9-0ab9-4bab-894f-6430b91589cc",
-   "location": [
-    99.0,
-    22.0
-   ],
+   "input": {
+    "x": 99.0,
+    "y": 22.0,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": true,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      117.0,
+      39.0
+     ],
+     "opponents": [
+      [
+       99.0,
+       40.0
+      ],
+      [
+       93.0,
+       30.0
+      ],
+      [
+       98.0,
+       26.0
+      ],
+      [
+       100.0,
+       25.0
+      ]
+     ],
+     "teammates_in_box": 0
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     93.0,
+     30.0
+    ]
+   },
    "features": {
     "distance": 27.65863337187866,
     "angle": 0.22064718266034375,
@@ -755,10 +924,64 @@
   },
   {
    "shot_id": "e4ba8ae5-9cfd-44bb-bc20-738a1579730d",
-   "location": [
-    110.0,
-    44.0
-   ],
+   "input": {
+    "x": 110.0,
+    "y": 44.0,
+    "body_part": "head",
+    "shot_type": "open_play",
+    "play_pattern": "from_corner",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      119.0,
+      42.0
+     ],
+     "opponents": [
+      [
+       118.0,
+       44.0
+      ],
+      [
+       112.0,
+       43.0
+      ],
+      [
+       119.0,
+       62.0
+      ],
+      [
+       103.0,
+       44.0
+      ],
+      [
+       111.0,
+       41.0
+      ],
+      [
+       110.0,
+       39.0
+      ],
+      [
+       109.0,
+       28.0
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "corner",
+    "pass_origin": [
+     120.0,
+     80.0
+    ]
+   },
    "features": {
     "distance": 10.770329614269007,
     "angle": 0.6747409422235525,
@@ -986,10 +1209,60 @@
   },
   {
    "shot_id": "73b85f5b-0aba-42f3-a480-9a0ebbfadad9",
-   "location": [
-    103.0,
-    35.3
-   ],
+   "input": {
+    "x": 103.0,
+    "y": 35.3,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_throw_in",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      119.1,
+      37.7
+     ],
+     "opponents": [
+      [
+       109.0,
+       42.9
+      ],
+      [
+       106.1,
+       40.1
+      ],
+      [
+       106.3,
+       33.8
+      ],
+      [
+       108.3,
+       37.3
+      ],
+      [
+       110.5,
+       32.0
+      ],
+      [
+       104.2,
+       21.5
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     108.5,
+     28.2
+    ]
+   },
    "features": {
     "distance": 17.63774361986249,
     "angle": 0.4318617938571413,
@@ -1217,10 +1490,69 @@
   },
   {
    "shot_id": "8ba6207b-1cb9-43eb-adb5-d1806943c39e",
-   "location": [
-    115.7,
-    34.6
-   ],
+   "input": {
+    "x": 115.7,
+    "y": 34.6,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_corner",
+    "under_pressure": false,
+    "technique": "half_volley",
+    "freeze_frame": {
+     "gk": [
+      119.2,
+      37.9
+     ],
+     "opponents": [
+      [
+       117.8,
+       34.8
+      ],
+      [
+       118.0,
+       38.0
+      ],
+      [
+       118.8,
+       36.5
+      ],
+      [
+       119.1,
+       41.3
+      ],
+      [
+       116.2,
+       39.8
+      ],
+      [
+       117.1,
+       35.9
+      ],
+      [
+       109.5,
+       38.6
+      ],
+      [
+       108.1,
+       20.3
+      ],
+      [
+       114.7,
+       35.7
+      ]
+     ],
+     "teammates_in_box": 5
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "none",
+    "pass_origin": null
+   },
    "features": {
     "distance": 6.902897942168924,
     "angle": 0.8270092553585431,
@@ -1448,10 +1780,73 @@
   },
   {
    "shot_id": "f2ca6769-59f3-4226-83ec-09f268ac290a",
-   "location": [
-    83.7,
-    38.0
-   ],
+   "input": {
+    "x": 83.7,
+    "y": 38.0,
+    "body_part": "left_foot",
+    "shot_type": "free_kick",
+    "play_pattern": "from_free_kick",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.9,
+      40.5
+     ],
+     "opponents": [
+      [
+       103.1,
+       52.2
+      ],
+      [
+       95.9,
+       37.9
+      ],
+      [
+       96.0,
+       38.7
+      ],
+      [
+       98.9,
+       39.3
+      ],
+      [
+       101.8,
+       44.2
+      ],
+      [
+       102.2,
+       49.3
+      ],
+      [
+       102.7,
+       51.0
+      ],
+      [
+       103.9,
+       53.3
+      ],
+      [
+       103.5,
+       56.5
+      ],
+      [
+       102.9,
+       58.7
+      ]
+     ],
+     "teammates_in_box": 4
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "none",
+    "pass_origin": null
+   },
    "features": {
     "distance": 36.35505466919284,
     "angle": 0.2188489651875833,
@@ -1679,10 +2074,72 @@
   },
   {
    "shot_id": "ae2703e9-c1cc-4722-b374-5967983d6967",
-   "location": [
-    93.7,
-    51.5
-   ],
+   "input": {
+    "x": 93.7,
+    "y": 51.5,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      114.8,
+      42.3
+     ],
+     "opponents": [
+      [
+       89.3,
+       36.0
+      ],
+      [
+       88.6,
+       56.7
+      ],
+      [
+       92.1,
+       53.8
+      ],
+      [
+       91.8,
+       51.8
+      ],
+      [
+       101.0,
+       45.9
+      ],
+      [
+       99.7,
+       36.9
+      ],
+      [
+       100.8,
+       52.9
+      ],
+      [
+       98.8,
+       61.5
+      ],
+      [
+       84.4,
+       65.2
+      ]
+     ],
+     "teammates_in_box": 0
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     90.6,
+     57.7
+    ]
+   },
    "features": {
     "distance": 28.704355070267646,
     "angle": 0.25475709503073396,
@@ -1910,10 +2367,65 @@
   },
   {
    "shot_id": "1b4e2702-bded-40b2-b25d-3b0b6d001974",
-   "location": [
-    104.5,
-    51.0
-   ],
+   "input": {
+    "x": 104.5,
+    "y": 51.0,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_corner",
+    "under_pressure": false,
+    "technique": "volley",
+    "freeze_frame": {
+     "gk": [
+      119.5,
+      40.8
+     ],
+     "opponents": [
+      [
+       111.3,
+       48.2
+      ],
+      [
+       113.7,
+       43.9
+      ],
+      [
+       107.8,
+       49.4
+      ],
+      [
+       111.1,
+       42.8
+      ],
+      [
+       112.2,
+       36.5
+      ],
+      [
+       111.2,
+       34.2
+      ],
+      [
+       107.1,
+       37.7
+      ],
+      [
+       109.9,
+       31.2
+      ]
+     ],
+     "teammates_in_box": 5
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "none",
+    "pass_origin": null
+   },
    "features": {
     "distance": 19.00657780874821,
     "angle": 0.34481178118567646,
@@ -2141,10 +2653,68 @@
   },
   {
    "shot_id": "b3b5bd50-6af9-445d-a801-c2026381c596",
-   "location": [
-    104.0,
-    33.0
-   ],
+   "input": {
+    "x": 104.0,
+    "y": 33.0,
+    "body_part": "left_foot",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.8,
+      37.0
+     ],
+     "opponents": [
+      [
+       102.9,
+       27.4
+      ],
+      [
+       111.5,
+       44.8
+      ],
+      [
+       112.7,
+       40.8
+      ],
+      [
+       112.8,
+       34.0
+      ],
+      [
+       100.6,
+       52.0
+      ],
+      [
+       108.1,
+       31.1
+      ],
+      [
+       104.7,
+       35.0
+      ],
+      [
+       109.2,
+       24.8
+      ]
+     ],
+     "teammates_in_box": 4
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     107.8,
+     24.7
+    ]
+   },
    "features": {
     "distance": 17.46424919657298,
     "angle": 0.41693939613926956,
@@ -2372,10 +2942,73 @@
   },
   {
    "shot_id": "2586bfdc-2068-456b-8554-61c98e4afa9f",
-   "location": [
-    89.8,
-    40.7
-   ],
+   "input": {
+    "x": 89.8,
+    "y": 40.7,
+    "body_part": "right_foot",
+    "shot_type": "free_kick",
+    "play_pattern": "from_free_kick",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.2,
+      39.4
+     ],
+     "opponents": [
+      [
+       102.5,
+       44.6
+      ],
+      [
+       99.9,
+       43.0
+      ],
+      [
+       99.8,
+       42.3
+      ],
+      [
+       99.8,
+       41.4
+      ],
+      [
+       100.5,
+       34.4
+      ],
+      [
+       99.8,
+       40.5
+      ],
+      [
+       98.8,
+       39.9
+      ],
+      [
+       102.8,
+       31.7
+      ],
+      [
+       102.9,
+       34.4
+      ],
+      [
+       103.2,
+       36.4
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "none",
+    "pass_origin": null
+   },
    "features": {
     "distance": 30.208111493438317,
     "angle": 0.2632303224414027,
@@ -2603,10 +3236,61 @@
   },
   {
    "shot_id": "a6f6b8f0-60bb-41fb-8f5d-31a1a6048b28",
-   "location": [
-    109.8,
-    45.8
-   ],
+   "input": {
+    "x": 109.8,
+    "y": 45.8,
+    "body_part": "left_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_free_kick",
+    "under_pressure": false,
+    "technique": "half_volley",
+    "freeze_frame": {
+     "gk": [
+      118.2,
+      43.5
+     ],
+     "opponents": [
+      [
+       114.6,
+       48.7
+      ],
+      [
+       118.1,
+       53.1
+      ],
+      [
+       99.6,
+       49.9
+      ],
+      [
+       106.6,
+       43.7
+      ],
+      [
+       113.9,
+       43.5
+      ],
+      [
+       113.8,
+       40.8
+      ],
+      [
+       107.1,
+       56.9
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "none",
+    "pass_origin": null
+   },
    "features": {
     "distance": 11.733712115098104,
     "angle": 0.5907286304160584,
@@ -2834,10 +3518,64 @@
   },
   {
    "shot_id": "72596ffe-393e-4a75-82c6-5fb82ae36d4d",
-   "location": [
-    107.1,
-    26.6
-   ],
+   "input": {
+    "x": 107.1,
+    "y": 26.6,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      117.5,
+      36.8
+     ],
+     "opponents": [
+      [
+       108.1,
+       27.5
+      ],
+      [
+       109.7,
+       31.1
+      ],
+      [
+       112.1,
+       40.4
+      ],
+      [
+       105.0,
+       29.6
+      ],
+      [
+       106.6,
+       34.8
+      ],
+      [
+       110.7,
+       46.7
+      ],
+      [
+       99.9,
+       49.7
+      ]
+     ],
+     "teammates_in_box": 2
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     93.5,
+     39.3
+    ]
+   },
    "features": {
     "distance": 18.600268815261785,
     "angle": 0.30311780691639345,
@@ -3065,10 +3803,52 @@
   },
   {
    "shot_id": "b2bae775-5dd8-45bf-9b84-191c7849f707",
-   "location": [
-    113.7,
-    54.0
-   ],
+   "input": {
+    "x": 113.7,
+    "y": 54.0,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.4,
+      45.1
+     ],
+     "opponents": [
+      [
+       103.4,
+       35.5
+      ],
+      [
+       107.5,
+       56.8
+      ],
+      [
+       111.1,
+       43.7
+      ],
+      [
+       114.1,
+       52.2
+      ]
+     ],
+     "teammates_in_box": 2
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "high_pass",
+    "pass_origin": [
+     63.8,
+     60.1
+    ]
+   },
    "features": {
     "distance": 15.352198539622915,
     "angle": 0.22551192451330118,
@@ -3296,10 +4076,69 @@
   },
   {
    "shot_id": "f6bb620b-8e2b-41f5-b707-379cb3620a2f",
-   "location": [
-    95.2,
-    51.8
-   ],
+   "input": {
+    "x": 95.2,
+    "y": 51.8,
+    "body_part": "left_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_free_kick",
+    "under_pressure": false,
+    "technique": "half_volley",
+    "freeze_frame": {
+     "gk": [
+      116.6,
+      41.6
+     ],
+     "opponents": [
+      [
+       108.0,
+       49.6
+      ],
+      [
+       108.4,
+       43.6
+      ],
+      [
+       110.0,
+       42.6
+      ],
+      [
+       101.6,
+       47.3
+      ],
+      [
+       103.2,
+       40.7
+      ],
+      [
+       106.7,
+       37.6
+      ],
+      [
+       98.9,
+       45.7
+      ],
+      [
+       108.6,
+       48.1
+      ],
+      [
+       96.4,
+       40.5
+      ]
+     ],
+     "teammates_in_box": 4
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "none",
+    "pass_origin": null
+   },
    "features": {
     "distance": 27.46415846152945,
     "angle": 0.2625302951205957,
@@ -3527,10 +4366,64 @@
   },
   {
    "shot_id": "e73ca652-6c91-45db-87c8-289bf2f9a764",
-   "location": [
-    106.8,
-    31.8
-   ],
+   "input": {
+    "x": 106.8,
+    "y": 31.8,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_counter",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      115.9,
+      37.3
+     ],
+     "opponents": [
+      [
+       107.2,
+       32.0
+      ],
+      [
+       86.9,
+       15.7
+      ],
+      [
+       90.4,
+       18.5
+      ],
+      [
+       107.5,
+       39.3
+      ],
+      [
+       104.7,
+       33.0
+      ],
+      [
+       109.1,
+       31.0
+      ],
+      [
+       107.9,
+       27.4
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     101.7,
+     21.1
+    ]
+   },
    "features": {
     "distance": 15.539626765144654,
     "angle": 0.4379956259850668,
@@ -3758,10 +4651,76 @@
   },
   {
    "shot_id": "7dd19b4f-4547-4584-9473-724ce010e3cb",
-   "location": [
-    105.0,
-    34.4
-   ],
+   "input": {
+    "x": 105.0,
+    "y": 34.4,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_corner",
+    "under_pressure": false,
+    "technique": "volley",
+    "freeze_frame": {
+     "gk": [
+      119.8,
+      39.4
+     ],
+     "opponents": [
+      [
+       113.4,
+       36.4
+      ],
+      [
+       106.0,
+       41.1
+      ],
+      [
+       105.0,
+       41.5
+      ],
+      [
+       109.2,
+       60.5
+      ],
+      [
+       112.9,
+       44.7
+      ],
+      [
+       100.1,
+       59.2
+      ],
+      [
+       110.7,
+       41.2
+      ],
+      [
+       114.3,
+       38.8
+      ],
+      [
+       114.4,
+       45.3
+      ],
+      [
+       119.1,
+       44.0
+      ]
+     ],
+     "teammates_in_box": 5
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "corner",
+    "pass_origin": [
+     120.0,
+     80.0
+    ]
+   },
    "features": {
     "distance": 16.011246047700347,
     "angle": 0.46304832820958297,
@@ -3989,10 +4948,64 @@
   },
   {
    "shot_id": "9ba1e8c1-646c-4d4e-a3c3-b14fb95f1f7e",
-   "location": [
-    96.9,
-    26.0
-   ],
+   "input": {
+    "x": 96.9,
+    "y": 26.0,
+    "body_part": "left_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_corner",
+    "under_pressure": false,
+    "technique": "half_volley",
+    "freeze_frame": {
+     "gk": [
+      118.6,
+      39.8
+     ],
+     "opponents": [
+      [
+       93.0,
+       24.2
+      ],
+      [
+       95.0,
+       29.4
+      ],
+      [
+       100.4,
+       30.3
+      ],
+      [
+       96.1,
+       40.6
+      ],
+      [
+       76.1,
+       22.9
+      ],
+      [
+       82.7,
+       30.8
+      ],
+      [
+       84.4,
+       35.9
+      ]
+     ],
+     "teammates_in_box": 0
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     82.4,
+     26.3
+    ]
+   },
    "features": {
     "distance": 27.011293934204627,
     "angle": 0.2533983322870405,
@@ -4220,10 +5233,68 @@
   },
   {
    "shot_id": "1b8ca171-80c3-4db0-816a-465a1a6e53fb",
-   "location": [
-    103.6,
-    21.5
-   ],
+   "input": {
+    "x": 103.6,
+    "y": 21.5,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_kick_off",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      117.2,
+      36.9
+     ],
+     "opponents": [
+      [
+       102.8,
+       39.8
+      ],
+      [
+       110.5,
+       44.6
+      ],
+      [
+       111.0,
+       39.2
+      ],
+      [
+       106.9,
+       34.0
+      ],
+      [
+       113.7,
+       34.5
+      ],
+      [
+       107.7,
+       28.4
+      ],
+      [
+       106.6,
+       24.0
+      ],
+      [
+       111.6,
+       24.2
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     116.2,
+     11.9
+    ]
+   },
    "features": {
     "distance": 24.7226616690032,
     "angle": 0.2169569874945208,
@@ -4451,10 +5522,64 @@
   },
   {
    "shot_id": "d6386d77-8bc5-43d3-85cd-039aceb6dbe2",
-   "location": [
-    111.3,
-    26.6
-   ],
+   "input": {
+    "x": 111.3,
+    "y": 26.6,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_throw_in",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      117.5,
+      36.4
+     ],
+     "opponents": [
+      [
+       101.7,
+       35.6
+      ],
+      [
+       110.7,
+       43.4
+      ],
+      [
+       107.4,
+       39.3
+      ],
+      [
+       110.2,
+       35.9
+      ],
+      [
+       108.6,
+       29.6
+      ],
+      [
+       113.6,
+       32.5
+      ],
+      [
+       113.1,
+       29.1
+      ]
+     ],
+     "teammates_in_box": 2
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     87.9,
+     61.6
+    ]
+   },
    "features": {
     "distance": 15.976545308670458,
     "angle": 0.28309578529949603,
@@ -4682,10 +5807,60 @@
   },
   {
    "shot_id": "0afcb349-5404-4e5a-882f-3655a27dcdf5",
-   "location": [
-    112.6,
-    42.4
-   ],
+   "input": {
+    "x": 112.6,
+    "y": 42.4,
+    "body_part": "head",
+    "shot_type": "open_play",
+    "play_pattern": "from_throw_in",
+    "under_pressure": true,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.5,
+      41.4
+     ],
+     "opponents": [
+      [
+       113.6,
+       42.6
+      ],
+      [
+       107.2,
+       39.5
+      ],
+      [
+       108.5,
+       37.3
+      ],
+      [
+       99.9,
+       31.7
+      ],
+      [
+       106.4,
+       59.9
+      ],
+      [
+       118.5,
+       58.2
+      ]
+     ],
+     "teammates_in_box": 1
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "cross",
+    "pass_origin": [
+     118.4,
+     70.6
+    ]
+   },
    "features": {
     "distance": 7.7794601355106945,
     "angle": 0.9259991824382501,
@@ -4913,10 +6088,72 @@
   },
   {
    "shot_id": "1db761c3-d52f-4bbc-9f90-d64765e2d137",
-   "location": [
-    93.9,
-    40.1
-   ],
+   "input": {
+    "x": 93.9,
+    "y": 40.1,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_throw_in",
+    "under_pressure": true,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      117.8,
+      40.5
+     ],
+     "opponents": [
+      [
+       96.7,
+       33.9
+      ],
+      [
+       96.3,
+       38.4
+      ],
+      [
+       103.4,
+       27.8
+      ],
+      [
+       101.7,
+       33.7
+      ],
+      [
+       100.5,
+       40.1
+      ],
+      [
+       96.1,
+       30.6
+      ],
+      [
+       96.7,
+       19.1
+      ],
+      [
+       99.6,
+       48.0
+      ],
+      [
+       102.4,
+       43.2
+      ]
+     ],
+     "teammates_in_box": 2
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     96.9,
+     25.3
+    ]
+   },
    "features": {
     "distance": 26.100191570178172,
     "angle": 0.30414261957013505,
@@ -5144,10 +6381,68 @@
   },
   {
    "shot_id": "74c730a2-ee9d-440b-91a4-93547a88286a",
-   "location": [
-    97.9,
-    18.9
-   ],
+   "input": {
+    "x": 97.9,
+    "y": 18.9,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.2,
+      39.2
+     ],
+     "opponents": [
+      [
+       103.3,
+       47.2
+      ],
+      [
+       112.2,
+       44.8
+      ],
+      [
+       108.3,
+       39.0
+      ],
+      [
+       108.5,
+       36.5
+      ],
+      [
+       103.2,
+       30.1
+      ],
+      [
+       107.0,
+       30.0
+      ],
+      [
+       100.7,
+       20.7
+      ],
+      [
+       106.8,
+       21.4
+      ]
+     ],
+     "teammates_in_box": 5
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     94.8,
+     19.5
+    ]
+   },
    "features": {
     "distance": 30.555195957479963,
     "angle": 0.19033991500812622,
@@ -5375,10 +6670,60 @@
   },
   {
    "shot_id": "17de84a9-95e4-464b-8c1d-4123525d8356",
-   "location": [
-    104.1,
-    53.2
-   ],
+   "input": {
+    "x": 104.1,
+    "y": 53.2,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_free_kick",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.2,
+      41.8
+     ],
+     "opponents": [
+      [
+       105.5,
+       51.9
+      ],
+      [
+       102.1,
+       35.2
+      ],
+      [
+       99.2,
+       48.8
+      ],
+      [
+       90.6,
+       38.0
+      ],
+      [
+       101.0,
+       59.1
+      ],
+      [
+       88.8,
+       50.1
+      ]
+     ],
+     "teammates_in_box": 0
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     69.2,
+     59.1
+    ]
+   },
    "features": {
     "distance": 20.665188119153434,
     "angle": 0.30010509514447514,
@@ -5606,10 +6951,60 @@
   },
   {
    "shot_id": "75c4e453-08e3-4588-ad59-e59709b08281",
-   "location": [
-    113.3,
-    40.9
-   ],
+   "input": {
+    "x": 113.3,
+    "y": 40.9,
+    "body_part": "head",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      119.3,
+      39.0
+     ],
+     "opponents": [
+      [
+       118.0,
+       22.2
+      ],
+      [
+       116.8,
+       36.0
+      ],
+      [
+       114.3,
+       37.8
+      ],
+      [
+       101.0,
+       13.6
+      ],
+      [
+       103.0,
+       26.8
+      ],
+      [
+       113.9,
+       42.1
+      ]
+     ],
+     "teammates_in_box": 1
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "cross",
+    "pass_origin": [
+     116.7,
+     14.8
+    ]
+   },
    "features": {
     "distance": 6.7601775124622305,
     "angle": 1.064807348021129,
@@ -5837,10 +7232,68 @@
   },
   {
    "shot_id": "407db265-1311-4aaa-9fc3-a88e34e18405",
-   "location": [
-    100.0,
-    53.8
-   ],
+   "input": {
+    "x": 100.0,
+    "y": 53.8,
+    "body_part": "left_foot",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      117.8,
+      40.4
+     ],
+     "opponents": [
+      [
+       95.5,
+       47.2
+      ],
+      [
+       102.5,
+       53.4
+      ],
+      [
+       106.7,
+       56.2
+      ],
+      [
+       103.3,
+       42.8
+      ],
+      [
+       108.1,
+       46.9
+      ],
+      [
+       108.8,
+       41.6
+      ],
+      [
+       109.7,
+       37.8
+      ],
+      [
+       107.2,
+       28.4
+      ]
+     ],
+     "teammates_in_box": 2
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "recovery",
+    "pass_origin": [
+     84.6,
+     59.4
+    ]
+   },
    "features": {
     "distance": 24.29897117163605,
     "angle": 0.27164703478546587,
@@ -6068,10 +7521,72 @@
   },
   {
    "shot_id": "c07ea153-ff08-49d6-a625-3c0f74cf7e49",
-   "location": [
-    112.1,
-    40.5
-   ],
+   "input": {
+    "x": 112.1,
+    "y": 40.5,
+    "body_part": "head",
+    "shot_type": "open_play",
+    "play_pattern": "from_kick_off",
+    "under_pressure": true,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      117.2,
+      42.2
+     ],
+     "opponents": [
+      [
+       95.3,
+       42.3
+      ],
+      [
+       105.8,
+       47.5
+      ],
+      [
+       116.0,
+       60.9
+      ],
+      [
+       110.8,
+       50.1
+      ],
+      [
+       115.4,
+       50.4
+      ],
+      [
+       113.4,
+       44.3
+      ],
+      [
+       109.6,
+       36.9
+      ],
+      [
+       112.6,
+       39.7
+      ],
+      [
+       112.7,
+       34.6
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "cross",
+    "pass_origin": [
+     115.2,
+     69.5
+    ]
+   },
    "features": {
     "distance": 7.915806970865326,
     "angle": 0.9348311006011711,
@@ -6299,10 +7814,64 @@
   },
   {
    "shot_id": "2080650b-7f70-4711-86b4-c45f60b905bf",
-   "location": [
-    102.7,
-    29.2
-   ],
+   "input": {
+    "x": 102.7,
+    "y": 29.2,
+    "body_part": "left_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_goal_kick",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      114.9,
+      36.7
+     ],
+     "opponents": [
+      [
+       107.7,
+       48.0
+      ],
+      [
+       101.5,
+       32.8
+      ],
+      [
+       107.3,
+       40.6
+      ],
+      [
+       101.9,
+       27.3
+      ],
+      [
+       104.4,
+       28.9
+      ],
+      [
+       108.4,
+       25.7
+      ],
+      [
+       103.6,
+       17.7
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     105.4,
+     25.7
+    ]
+   },
    "features": {
     "distance": 20.394361965994424,
     "angle": 0.3331609948316027,
@@ -6530,10 +8099,56 @@
   },
   {
    "shot_id": "d61a5bc5-cdf0-47a7-ad8b-1453b3315a82",
-   "location": [
-    106.9,
-    45.7
-   ],
+   "input": {
+    "x": 106.9,
+    "y": 45.7,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_goal_kick",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      114.7,
+      42.9
+     ],
+     "opponents": [
+      [
+       105.9,
+       41.7
+      ],
+      [
+       105.8,
+       21.8
+      ],
+      [
+       111.5,
+       30.3
+      ],
+      [
+       109.5,
+       41.9
+      ],
+      [
+       111.5,
+       41.5
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "cross",
+    "pass_origin": [
+     105.2,
+     5.8
+    ]
+   },
    "features": {
     "distance": 14.286357128393504,
     "angle": 0.5083164207011521,
@@ -6761,10 +8376,60 @@
   },
   {
    "shot_id": "26b97ae4-3213-4621-9403-327bd8d869db",
-   "location": [
-    109.3,
-    51.9
-   ],
+   "input": {
+    "x": 109.3,
+    "y": 51.9,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_free_kick",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      114.8,
+      46.0
+     ],
+     "opponents": [
+      [
+       107.7,
+       55.7
+      ],
+      [
+       108.0,
+       51.2
+      ],
+      [
+       108.4,
+       43.5
+      ],
+      [
+       103.0,
+       54.7
+      ],
+      [
+       103.0,
+       53.0
+      ],
+      [
+       92.6,
+       56.5
+      ]
+     ],
+     "teammates_in_box": 2
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "through_ball",
+    "pass_origin": [
+     99.2,
+     58.3
+    ]
+   },
    "features": {
     "distance": 16.00312469488381,
     "angle": 0.3424697630350957,
@@ -6992,10 +8657,64 @@
   },
   {
    "shot_id": "3b6c33b6-d7f9-436f-b990-f96f863f741d",
-   "location": [
-    101.0,
-    59.8
-   ],
+   "input": {
+    "x": 101.0,
+    "y": 59.8,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_throw_in",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      115.4,
+      44.5
+     ],
+     "opponents": [
+      [
+       99.1,
+       65.2
+      ],
+      [
+       101.8,
+       58.6
+      ],
+      [
+       97.1,
+       56.8
+      ],
+      [
+       101.3,
+       49.0
+      ],
+      [
+       88.2,
+       59.3
+      ],
+      [
+       88.6,
+       58.2
+      ],
+      [
+       98.6,
+       38.7
+      ]
+     ],
+     "teammates_in_box": 0
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     80.5,
+     75.4
+    ]
+   },
    "features": {
     "distance": 27.441574298862662,
     "angle": 0.20337901809976208,
@@ -7223,10 +8942,76 @@
   },
   {
    "shot_id": "2f712343-bfea-4303-a87e-df30687909dd",
-   "location": [
-    113.7,
-    53.4
-   ],
+   "input": {
+    "x": 113.7,
+    "y": 53.4,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_corner",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.3,
+      42.7
+     ],
+     "opponents": [
+      [
+       112.8,
+       34.0
+      ],
+      [
+       115.0,
+       48.9
+      ],
+      [
+       110.4,
+       42.2
+      ],
+      [
+       114.9,
+       41.4
+      ],
+      [
+       113.1,
+       37.7
+      ],
+      [
+       113.4,
+       55.2
+      ],
+      [
+       109.8,
+       52.8
+      ],
+      [
+       110.1,
+       48.6
+      ],
+      [
+       114.2,
+       45.6
+      ],
+      [
+       108.7,
+       39.3
+      ]
+     ],
+     "teammates_in_box": 6
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "corner",
+    "pass_origin": [
+     120.0,
+     80.0
+    ]
+   },
    "features": {
     "distance": 14.807092894960844,
     "angle": 0.24306761611349417,
@@ -7454,10 +9239,68 @@
   },
   {
    "shot_id": "d3b98558-b389-405a-b0a1-2186af417745",
-   "location": [
-    115.3,
-    53.0
-   ],
+   "input": {
+    "x": 115.3,
+    "y": 53.0,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_counter",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.7,
+      44.0
+     ],
+     "opponents": [
+      [
+       106.7,
+       60.1
+      ],
+      [
+       112.5,
+       49.5
+      ],
+      [
+       114.0,
+       45.8
+      ],
+      [
+       107.3,
+       50.7
+      ],
+      [
+       109.9,
+       39.5
+      ],
+      [
+       103.1,
+       47.7
+      ],
+      [
+       88.9,
+       57.5
+      ],
+      [
+       94.7,
+       47.0
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "through_ball",
+    "pass_origin": [
+     96.1,
+     53.5
+    ]
+   },
    "features": {
     "distance": 13.823530663329105,
     "angle": 0.2115340405099564,
@@ -7685,10 +9528,76 @@
   },
   {
    "shot_id": "e212ca00-5015-444d-ba8a-49ea551da07b",
-   "location": [
-    113.0,
-    44.0
-   ],
+   "input": {
+    "x": 113.0,
+    "y": 44.0,
+    "body_part": "head",
+    "shot_type": "open_play",
+    "play_pattern": "from_throw_in",
+    "under_pressure": true,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.9,
+      40.3
+     ],
+     "opponents": [
+      [
+       110.7,
+       51.5
+      ],
+      [
+       113.5,
+       43.8
+      ],
+      [
+       112.3,
+       41.2
+      ],
+      [
+       113.4,
+       37.4
+      ],
+      [
+       110.3,
+       38.8
+      ],
+      [
+       103.4,
+       41.5
+      ],
+      [
+       108.8,
+       65.7
+      ],
+      [
+       105.4,
+       51.4
+      ],
+      [
+       102.0,
+       49.7
+      ],
+      [
+       94.9,
+       63.6
+      ]
+     ],
+     "teammates_in_box": 4
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "cross",
+    "pass_origin": [
+     110.6,
+     70.2
+    ]
+   },
    "features": {
     "distance": 8.06225774829855,
     "angle": 0.8519663271732721,
@@ -7916,10 +9825,73 @@
   },
   {
    "shot_id": "b415b2b0-a87a-44c7-aaeb-266b95b8a608",
-   "location": [
-    98.9,
-    30.3
-   ],
+   "input": {
+    "x": 98.9,
+    "y": 30.3,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_throw_in",
+    "under_pressure": true,
+    "technique": "half_volley",
+    "freeze_frame": {
+     "gk": [
+      118.6,
+      39.8
+     ],
+     "opponents": [
+      [
+       99.9,
+       37.3
+      ],
+      [
+       106.4,
+       44.5
+      ],
+      [
+       108.0,
+       39.9
+      ],
+      [
+       107.2,
+       36.7
+      ],
+      [
+       106.4,
+       32.6
+      ],
+      [
+       109.6,
+       32.9
+      ],
+      [
+       107.8,
+       28.7
+      ],
+      [
+       111.0,
+       31.1
+      ],
+      [
+       104.4,
+       22.9
+      ],
+      [
+       99.8,
+       31.3
+      ]
+     ],
+     "teammates_in_box": 4
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "none",
+    "pass_origin": null
+   },
    "features": {
     "distance": 23.22283359110166,
     "angle": 0.3120309548037412,
@@ -8147,10 +10119,68 @@
   },
   {
    "shot_id": "8d13a320-e779-4907-b44b-76a4a9294e1e",
-   "location": [
-    101.3,
-    40.2
-   ],
+   "input": {
+    "x": 101.3,
+    "y": 40.2,
+    "body_part": "left_foot",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.6,
+      38.8
+     ],
+     "opponents": [
+      [
+       109.2,
+       31.6
+      ],
+      [
+       104.0,
+       27.3
+      ],
+      [
+       109.1,
+       26.1
+      ],
+      [
+       106.6,
+       31.6
+      ],
+      [
+       107.4,
+       34.0
+      ],
+      [
+       110.6,
+       42.9
+      ],
+      [
+       96.5,
+       26.0
+      ],
+      [
+       95.2,
+       43.1
+      ]
+     ],
+     "teammates_in_box": 4
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     104.4,
+     21.5
+    ]
+   },
    "features": {
     "distance": 18.701069488133562,
     "angle": 0.42141146360015924,
@@ -8378,10 +10408,61 @@
   },
   {
    "shot_id": "3bee6677-0c66-4011-8703-340be28f63e3",
-   "location": [
-    105.8,
-    32.2
-   ],
+   "input": {
+    "x": 105.8,
+    "y": 32.2,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_free_kick",
+    "under_pressure": true,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      117.5,
+      37.4
+     ],
+     "opponents": [
+      [
+       107.3,
+       34.2
+      ],
+      [
+       107.0,
+       30.9
+      ],
+      [
+       104.0,
+       33.7
+      ],
+      [
+       107.3,
+       26.2
+      ],
+      [
+       106.3,
+       23.6
+      ],
+      [
+       84.4,
+       52.8
+      ],
+      [
+       93.6,
+       25.9
+      ]
+     ],
+     "teammates_in_box": 2
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "none",
+    "pass_origin": null
+   },
    "features": {
     "distance": 16.20123452086291,
     "angle": 0.4318724988217922,
@@ -8609,10 +10690,61 @@
   },
   {
    "shot_id": "b67522fe-cbd1-4ca6-9f56-ee155c4f22ab",
-   "location": [
-    95.0,
-    45.8
-   ],
+   "input": {
+    "x": 95.0,
+    "y": 45.8,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": true,
+    "technique": "volley",
+    "freeze_frame": {
+     "gk": [
+      118.0,
+      41.2
+     ],
+     "opponents": [
+      [
+       105.9,
+       57.4
+      ],
+      [
+       99.4,
+       59.2
+      ],
+      [
+       106.9,
+       44.4
+      ],
+      [
+       108.9,
+       39.8
+      ],
+      [
+       107.7,
+       36.3
+      ],
+      [
+       102.5,
+       43.1
+      ],
+      [
+       96.7,
+       47.7
+      ]
+     ],
+     "teammates_in_box": 4
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "none",
+    "pass_origin": null
+   },
    "features": {
     "distance": 25.663982543634962,
     "angle": 0.3017148884793971,
@@ -8840,10 +10972,76 @@
   },
   {
    "shot_id": "52e44da7-80d8-44db-a234-480bf6376003",
-   "location": [
-    97.8,
-    60.1
-   ],
+   "input": {
+    "x": 97.8,
+    "y": 60.1,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_free_kick",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      117.2,
+      42.4
+     ],
+     "opponents": [
+      [
+       94.7,
+       66.6
+      ],
+      [
+       93.2,
+       55.5
+      ],
+      [
+       101.8,
+       65.0
+      ],
+      [
+       100.7,
+       58.5
+      ],
+      [
+       102.5,
+       55.5
+      ],
+      [
+       99.4,
+       48.4
+      ],
+      [
+       95.2,
+       34.5
+      ],
+      [
+       106.6,
+       45.7
+      ],
+      [
+       106.2,
+       40.9
+      ],
+      [
+       106.9,
+       34.7
+      ]
+     ],
+     "teammates_in_box": 2
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     88.0,
+     73.7
+    ]
+   },
    "features": {
     "distance": 29.94745398193309,
     "angle": 0.19895606361935692,
@@ -9071,10 +11269,61 @@
   },
   {
    "shot_id": "798ea4df-c4de-4825-95d8-cbbb1c072444",
-   "location": [
-    107.3,
-    33.8
-   ],
+   "input": {
+    "x": 107.3,
+    "y": 33.8,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": false,
+    "technique": "volley",
+    "freeze_frame": {
+     "gk": [
+      119.0,
+      39.8
+     ],
+     "opponents": [
+      [
+       107.2,
+       56.8
+      ],
+      [
+       104.8,
+       49.3
+      ],
+      [
+       100.6,
+       34.8
+      ],
+      [
+       105.7,
+       40.9
+      ],
+      [
+       110.4,
+       43.1
+      ],
+      [
+       110.2,
+       40.2
+      ],
+      [
+       110.0,
+       34.7
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "none",
+    "pass_origin": null
+   },
    "features": {
     "distance": 14.132586458253142,
     "angle": 0.5051323434429044,
@@ -9302,10 +11551,76 @@
   },
   {
    "shot_id": "4fee74ed-d1e1-4e00-84a4-00b22595b772",
-   "location": [
-    105.6,
-    39.0
-   ],
+   "input": {
+    "x": 105.6,
+    "y": 39.0,
+    "body_part": "head",
+    "shot_type": "open_play",
+    "play_pattern": "from_free_kick",
+    "under_pressure": true,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.3,
+      41.0
+     ],
+     "opponents": [
+      [
+       108.2,
+       41.0
+      ],
+      [
+       108.9,
+       42.6
+      ],
+      [
+       107.8,
+       47.7
+      ],
+      [
+       108.1,
+       46.2
+      ],
+      [
+       108.5,
+       44.2
+      ],
+      [
+       106.2,
+       39.2
+      ],
+      [
+       95.7,
+       37.7
+      ],
+      [
+       92.9,
+       26.4
+      ],
+      [
+       106.1,
+       37.8
+      ],
+      [
+       102.6,
+       16.2
+      ]
+     ],
+     "teammates_in_box": 5
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "free_kick",
+    "pass_origin": [
+     82.8,
+     24.6
+    ]
+   },
    "features": {
     "distance": 14.434680460612912,
     "angle": 0.5395934334552704,
@@ -9533,10 +11848,73 @@
   },
   {
    "shot_id": "3050556c-b2b5-4ced-ba6e-3280d56045d2",
-   "location": [
-    101.6,
-    37.8
-   ],
+   "input": {
+    "x": 101.6,
+    "y": 37.8,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_throw_in",
+    "under_pressure": true,
+    "technique": "volley",
+    "freeze_frame": {
+     "gk": [
+      118.7,
+      40.7
+     ],
+     "opponents": [
+      [
+       103.1,
+       38.3
+      ],
+      [
+       89.3,
+       45.8
+      ],
+      [
+       94.8,
+       60.1
+      ],
+      [
+       104.9,
+       63.1
+      ],
+      [
+       103.4,
+       49.9
+      ],
+      [
+       105.6,
+       51.3
+      ],
+      [
+       104.7,
+       43.7
+      ],
+      [
+       108.4,
+       46.8
+      ],
+      [
+       108.4,
+       41.9
+      ],
+      [
+       107.3,
+       38.9
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "none",
+    "pass_origin": null
+   },
    "features": {
     "distance": 18.53105501583761,
     "angle": 0.42252367515419387,
@@ -9764,10 +12142,72 @@
   },
   {
    "shot_id": "5f36d325-2132-4859-9586-1f12381b1760",
-   "location": [
-    91.2,
-    49.7
-   ],
+   "input": {
+    "x": 91.2,
+    "y": 49.7,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      117.5,
+      40.9
+     ],
+     "opponents": [
+      [
+       80.5,
+       33.4
+      ],
+      [
+       94.0,
+       46.4
+      ],
+      [
+       103.8,
+       52.0
+      ],
+      [
+       101.0,
+       46.0
+      ],
+      [
+       98.0,
+       37.0
+      ],
+      [
+       90.8,
+       16.6
+      ],
+      [
+       106.7,
+       35.9
+      ],
+      [
+       104.9,
+       29.2
+      ],
+      [
+       103.4,
+       25.8
+      ]
+     ],
+     "teammates_in_box": 4
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     89.9,
+     14.8
+    ]
+   },
    "features": {
     "distance": 30.389636391375266,
     "angle": 0.24862323372957243,
@@ -9995,10 +12435,76 @@
   },
   {
    "shot_id": "02da99cd-6001-4547-8a0a-de973b029ce7",
-   "location": [
-    110.3,
-    32.0
-   ],
+   "input": {
+    "x": 110.3,
+    "y": 32.0,
+    "body_part": "head",
+    "shot_type": "open_play",
+    "play_pattern": "from_corner",
+    "under_pressure": true,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.7,
+      38.8
+     ],
+     "opponents": [
+      [
+       115.2,
+       44.4
+      ],
+      [
+       114.8,
+       42.0
+      ],
+      [
+       115.4,
+       40.6
+      ],
+      [
+       113.1,
+       35.9
+      ],
+      [
+       103.7,
+       48.5
+      ],
+      [
+       111.9,
+       50.3
+      ],
+      [
+       112.5,
+       44.1
+      ],
+      [
+       104.3,
+       30.0
+      ],
+      [
+       114.1,
+       33.7
+      ],
+      [
+       110.6,
+       32.5
+      ]
+     ],
+     "teammates_in_box": 5
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "corner",
+    "pass_origin": [
+     120.0,
+     80.0
+    ]
+   },
    "features": {
     "distance": 12.57338458808924,
     "angle": 0.49986925206011174,
@@ -10226,10 +12732,68 @@
   },
   {
    "shot_id": "27eb6b65-243f-42fb-bb76-4eb9aca5e75c",
-   "location": [
-    114.5,
-    32.5
-   ],
+   "input": {
+    "x": 114.5,
+    "y": 32.5,
+    "body_part": "head",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": true,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.5,
+      37.2
+     ],
+     "opponents": [
+      [
+       109.5,
+       59.6
+      ],
+      [
+       112.9,
+       33.9
+      ],
+      [
+       104.4,
+       40.5
+      ],
+      [
+       109.7,
+       46.2
+      ],
+      [
+       114.7,
+       50.0
+      ],
+      [
+       115.2,
+       61.1
+      ],
+      [
+       116.9,
+       40.3
+      ],
+      [
+       115.3,
+       32.3
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "cross",
+    "pass_origin": [
+     112.1,
+     76.7
+    ]
+   },
    "features": {
     "distance": 9.300537618869138,
     "angle": 0.5579615603279867,
@@ -10457,10 +13021,68 @@
   },
   {
    "shot_id": "47e05580-990e-43b6-81d6-00d784b1a5c0",
-   "location": [
-    103.7,
-    41.4
-   ],
+   "input": {
+    "x": 103.7,
+    "y": 41.4,
+    "body_part": "head",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": true,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      119.6,
+      40.8
+     ],
+     "opponents": [
+      [
+       110.0,
+       34.8
+      ],
+      [
+       105.8,
+       39.0
+      ],
+      [
+       107.0,
+       30.8
+      ],
+      [
+       108.4,
+       48.8
+      ],
+      [
+       102.0,
+       66.6
+      ],
+      [
+       104.1,
+       40.9
+      ],
+      [
+       97.5,
+       58.4
+      ],
+      [
+       88.9,
+       43.7
+      ]
+     ],
+     "teammates_in_box": 2
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "high_pass",
+    "pass_origin": [
+     82.2,
+     76.4
+    ]
+   },
    "features": {
     "distance": 16.360012224934305,
     "angle": 0.47808561468226407,
@@ -10688,10 +13310,73 @@
   },
   {
    "shot_id": "c10ec17b-2c83-4cef-990b-cc12eebb4e05",
-   "location": [
-    89.0,
-    40.0
-   ],
+   "input": {
+    "x": 89.0,
+    "y": 40.0,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "from_free_kick",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      119.0,
+      41.0
+     ],
+     "opponents": [
+      [
+       96.0,
+       61.0
+      ],
+      [
+       99.0,
+       34.0
+      ],
+      [
+       99.0,
+       40.0
+      ],
+      [
+       103.0,
+       37.0
+      ],
+      [
+       102.0,
+       41.0
+      ],
+      [
+       91.0,
+       42.0
+      ],
+      [
+       93.0,
+       38.0
+      ],
+      [
+       103.0,
+       29.0
+      ],
+      [
+       104.0,
+       47.0
+      ],
+      [
+       92.0,
+       51.0
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": false,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "none",
+    "pass_origin": null
+   },
    "features": {
     "distance": 31.0,
     "angle": 0.25664645537158953,
@@ -10919,10 +13604,64 @@
   },
   {
    "shot_id": "26f4fd38-06a6-4921-b5fc-352822e4069c",
-   "location": [
-    99.0,
-    46.0
-   ],
+   "input": {
+    "x": 99.0,
+    "y": 46.0,
+    "body_part": "right_foot",
+    "shot_type": "open_play",
+    "play_pattern": "regular_play",
+    "under_pressure": false,
+    "technique": "normal",
+    "freeze_frame": {
+     "gk": [
+      118.0,
+      40.0
+     ],
+     "opponents": [
+      [
+       107.0,
+       34.0
+      ],
+      [
+       94.0,
+       31.0
+      ],
+      [
+       98.0,
+       37.0
+      ],
+      [
+       103.0,
+       36.0
+      ],
+      [
+       104.0,
+       45.0
+      ],
+      [
+       104.0,
+       48.0
+      ],
+      [
+       87.0,
+       58.0
+      ]
+     ],
+     "teammates_in_box": 3
+    },
+    "context": {
+     "first_time": true,
+     "follows_dribble": false,
+     "one_on_one": false,
+     "open_goal": false,
+     "rebound": false
+    },
+    "assist_type": "low_pass",
+    "pass_origin": [
+     104.0,
+     48.0
+    ]
+   },
    "features": {
     "distance": 21.840329667841555,
     "angle": 0.34946750355834233,

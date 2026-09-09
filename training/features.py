@@ -207,13 +207,79 @@ def _assist_type_from_pass(pass_obj: dict[str, Any]) -> str:
     return "low_pass"
 
 
-def build_shot_row(event: dict[str, Any],
+# --- the serve-time contract -------------------------------------------------
+# A "shot input" is a plain dict — the same shape the browser builds from operator taps.
+# An optional group is *absent* when its key is None:
+#   freeze_frame : {"gk": [x,y]|None, "opponents": [[x,y],...], "teammates_in_box": int} | None
+#   assist_type  : str | None          ("none" is a real value = unassisted, still present)
+#   pass_origin  : [x, y] | None
+#   technique    : str | None
+#   context      : {"first_time","follows_dribble","one_on_one","open_goal","rebound": bool} | None
+# `features_from_input` is what the TypeScript port must reproduce exactly.
+
+def present_groups(inp: dict[str, Any]) -> set[str]:
+    g = set()
+    if inp.get("freeze_frame") is not None:
+        g.add("freeze_frame")
+    if inp.get("assist_type") is not None:
+        g.add("assist")
+    if inp.get("pass_origin") is not None:
+        g.add("pass_origin")
+    if inp.get("technique") is not None:
+        g.add("technique")
+    if inp.get("context") is not None:
+        g.add("context")
+    return g
+
+
+def features_from_input(inp: dict[str, Any]) -> dict[str, Any]:
+    """Shot input dict -> feature dict (keys = FEATURE_COLUMNS). Absent groups -> NaN/None."""
+    x, y = float(inp["x"]), float(inp["y"])
+    row: dict[str, Any] = {}
+    row.update(shot_geometry(x, y))
+
+    row["body_part"] = inp["body_part"]
+    row["shot_type"] = inp["shot_type"]
+    row["play_pattern"] = inp["play_pattern"]
+    row["under_pressure"] = float(bool(inp["under_pressure"]))
+
+    ff = inp.get("freeze_frame")
+    if ff is not None:
+        feat = freeze_frame_features(
+            x, y,
+            [(float(o[0]), float(o[1])) for o in ff.get("opponents", [])],
+            (float(ff["gk"][0]), float(ff["gk"][1])) if ff.get("gk") else None,
+        )
+        feat["teammates_in_box"] = float(ff.get("teammates_in_box") or 0)
+        row.update(feat)
+    else:
+        for c in FEATURE_GROUPS["freeze_frame"]:
+            row[c] = math.nan
+
+    row["technique"] = inp.get("technique")  # None -> encoded as all-zero
+
+    ctx = inp.get("context")
+    for c in FEATURE_GROUPS["context"]:
+        row[c] = float(bool(ctx[c])) if ctx is not None else math.nan
+
+    row["assist_type"] = inp.get("assist_type")
+
+    po = inp.get("pass_origin")
+    if po is not None:
+        og = shot_geometry(float(po[0]), float(po[1]))
+        row["pass_origin_dist"] = og["distance"]
+        row["angle_swing"] = abs(row["angle"] - og["angle"])
+    else:
+        row["pass_origin_dist"] = math.nan
+        row["angle_swing"] = math.nan
+
+    return row
+
+
+def event_to_input(event: dict[str, Any],
                    key_pass: dict[str, Any] | None,
                    prev_event: dict[str, Any] | None) -> dict[str, Any] | None:
-    """
-    Full feature dict for one shot event (StatsBomb schema).
-    Returns None for penalties (handled by a constant elsewhere) and for malformed rows.
-    """
+    """StatsBomb shot event -> the plain shot-input dict. None for penalties / malformed."""
     shot = event.get("shot") or {}
     loc = event.get("location")
     if not loc or len(loc) < 2:
@@ -222,71 +288,64 @@ def build_shot_row(event: dict[str, Any],
     if sb_type == "Penalty":
         return None
 
-    x, y = float(loc[0]), float(loc[1])
-    row: dict[str, Any] = {}
-    row.update(shot_geometry(x, y))
+    inp: dict[str, Any] = {
+        "x": float(loc[0]), "y": float(loc[1]),
+        "body_part": _SB_BODY.get((shot.get("body_part") or {}).get("name"), "other"),
+        "shot_type": _SB_SHOT_TYPE.get(sb_type, "open_play"),
+        "play_pattern": _SB_PLAY_PATTERN.get((event.get("play_pattern") or {}).get("name"), "other"),
+        "under_pressure": bool(event.get("under_pressure", False)),
+        "technique": _SB_TECHNIQUE.get((shot.get("technique") or {}).get("name"), "normal"),
+    }
 
-    # --- core categoricals / flags -------------------------------------
-    row["body_part"] = _SB_BODY.get((shot.get("body_part") or {}).get("name"), "other")
-    row["shot_type"] = _SB_SHOT_TYPE.get(sb_type, "open_play")
-    row["play_pattern"] = _SB_PLAY_PATTERN.get((event.get("play_pattern") or {}).get("name"), "other")
-    row["under_pressure"] = float(bool(event.get("under_pressure", False)))
-
-    # --- freeze frame -------------------------------------------------
     ff = shot.get("freeze_frame")
     if ff:
-        opponents, keeper, teammates_in_box = [], None, 0
+        opponents, keeper, tib = [], None, 0
         for p in ff:
             pl = p.get("location")
             if not pl or len(pl) < 2:
                 continue
             px, py = float(pl[0]), float(pl[1])
-            is_mate = bool(p.get("teammate"))
-            is_gk = (p.get("position") or {}).get("name") == "Goalkeeper"
-            if is_mate:
+            if bool(p.get("teammate")):
                 if px >= BOX_X and BOX_Y_LO <= py <= BOX_Y_HI:
-                    teammates_in_box += 1
-            elif is_gk:
-                keeper = (px, py)
+                    tib += 1
+            elif (p.get("position") or {}).get("name") == "Goalkeeper":
+                keeper = [px, py]
             else:
-                opponents.append((px, py))
-        ffeat = freeze_frame_features(x, y, opponents, keeper)
-        ffeat["teammates_in_box"] = float(teammates_in_box)
-        row.update(ffeat)
+                opponents.append([px, py])
+        inp["freeze_frame"] = {"gk": keeper, "opponents": opponents, "teammates_in_box": tib}
     else:
-        for c in FEATURE_GROUPS["freeze_frame"]:
-            row[c] = math.nan
+        inp["freeze_frame"] = None
 
-    # --- technique --------------------------------------------------
-    row["technique"] = _SB_TECHNIQUE.get((shot.get("technique") or {}).get("name"), "normal")
-
-    # --- context flags -------------------------------------------------
-    row["first_time"] = float(bool(shot.get("first_time", False)))
-    row["follows_dribble"] = float(bool(shot.get("follows_dribble", False)))
-    row["one_on_one"] = float(bool(shot.get("one_on_one", False)))
-    row["open_goal"] = float(bool(shot.get("open_goal", False)))
     prev_type = (prev_event or {}).get("type", {}).get("name")
-    row["rebound"] = float(prev_type in {"Shot", "Goal Keeper"} and
-                           (prev_event or {}).get("possession") == event.get("possession"))
+    inp["context"] = {
+        "first_time": bool(shot.get("first_time", False)),
+        "follows_dribble": bool(shot.get("follows_dribble", False)),
+        "one_on_one": bool(shot.get("one_on_one", False)),
+        "open_goal": bool(shot.get("open_goal", False)),
+        "rebound": bool(prev_type in {"Shot", "Goal Keeper"} and
+                        (prev_event or {}).get("possession") == event.get("possession")),
+    }
 
-    # --- assist + pass origin ---------------------------------------
     if key_pass is not None:
-        kp = key_pass.get("pass") or {}
-        row["assist_type"] = _assist_type_from_pass(kp)
+        inp["assist_type"] = _assist_type_from_pass(key_pass.get("pass") or {})
         kloc = key_pass.get("location")
-        if kloc and len(kloc) >= 2:
-            og = shot_geometry(float(kloc[0]), float(kloc[1]))
-            row["pass_origin_dist"] = og["distance"]
-            row["angle_swing"] = abs(row["angle"] - og["angle"])
-        else:
-            row["pass_origin_dist"] = math.nan
-            row["angle_swing"] = math.nan
+        inp["pass_origin"] = [float(kloc[0]), float(kloc[1])] if kloc and len(kloc) >= 2 else None
     else:
-        row["assist_type"] = "none"
-        row["pass_origin_dist"] = math.nan
-        row["angle_swing"] = math.nan
+        inp["assist_type"] = "none"
+        inp["pass_origin"] = None
 
-    # --- label + metadata (not features) ----------------------------
+    return inp
+
+
+def build_shot_row(event: dict[str, Any],
+                   key_pass: dict[str, Any] | None,
+                   prev_event: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Feature dict + label + metadata for one StatsBomb shot event (dataset building)."""
+    inp = event_to_input(event, key_pass, prev_event)
+    if inp is None:
+        return None
+    shot = event.get("shot") or {}
+    row = features_from_input(inp)
     row["is_goal"] = int((shot.get("outcome") or {}).get("name") == "Goal")
     row["sb_xg"] = shot.get("statsbomb_xg")
     row["shot_id"] = event.get("id")

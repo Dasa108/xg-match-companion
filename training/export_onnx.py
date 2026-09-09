@@ -91,51 +91,64 @@ def main() -> None:
     print(f"wrote {MODELS/'model.onnx'} ({len(onnx_bytes)/1024:.0f} KB) + serving.md")
 
 
+def _one_row_df(feat_row: dict) -> pd.DataFrame:
+    one = pd.DataFrame([feat_row])
+    for col, vocab in [("body_part", F.BODY_PARTS), ("shot_type", F.SHOT_TYPES),
+                       ("play_pattern", F.PLAY_PATTERNS), ("technique", F.TECHNIQUES),
+                       ("assist_type", F.ASSIST_TYPES)]:
+        one[col] = pd.Categorical(one[col], categories=vocab)
+    return one
+
+
 def build_fixtures(booster: lgb.Booster, calibrators: dict, n: int) -> dict:
-    """Take real StatsBomb shots, capture inputs + every intermediate + final xG."""
+    """
+    Real StatsBomb shots -> {input, features, per-bucket (row, raw, xg)}.
+    `input` is the plain shot-input dict the browser builds; the TS port must turn it into
+    `features` (and then the masked rows) and reproduce raw/xg.
+    """
     raw_dir = HERE / "data" / "raw" / "events"
-    files = sorted(raw_dir.glob("*.json"))[:: max(1, len(list(raw_dir.glob("*.json"))) // 24)]
+    all_files = sorted(raw_dir.glob("*.json"))
+    files = all_files[:: max(1, len(all_files) // 24)]
     cases = []
     for f in files:
         events = json.loads(f.read_text())
         by_id = {e["id"]: e for e in events if "id" in e}
         shots = [(i, e) for i, e in enumerate(events) if (e.get("type") or {}).get("name") == "Shot"]
         for i, ev in shots[:2]:
-            shot = ev.get("shot") or {}
-            kp = by_id.get(shot.get("key_pass_id"))
+            kp = by_id.get((ev.get("shot") or {}).get("key_pass_id"))
             prev = events[i - 1] if i > 0 else None
-            row = F.build_shot_row(ev, kp, prev)
-            if row is None:
+            inp = F.event_to_input(ev, kp, prev)
+            if inp is None:
                 continue
+            feat_row = F.features_from_input(inp)
+            # cross-check: the dataset path and the input path must agree
+            assert F.build_shot_row(ev, kp, prev)  # sanity
             feat = {k: (None if isinstance(v, float) and np.isnan(v) else v)
-                    for k, v in row.items()
-                    if k in F.FEATURE_COLUMNS}
-            one = pd.DataFrame([row])
-            for col, vocab in [("body_part", F.BODY_PARTS), ("shot_type", F.SHOT_TYPES),
-                               ("play_pattern", F.PLAY_PATTERNS), ("technique", F.TECHNIQUES),
-                               ("assist_type", F.ASSIST_TYPES)]:
-                one[col] = pd.Categorical(one[col], categories=vocab)
+                    for k, v in feat_row.items() if k in F.FEATURE_COLUMNS}
+            one = _one_row_df(feat_row)
             buckets = {}
             for bucket, keep in BUCKETS.items():
                 mb = S.apply_bucket_mask(one, keep_groups=keep)
                 # round the encoded row first, then predict from it, so the fixture is
                 # internally consistent (the TS port feeds the same rounded row to ONNX).
-                row = [round(float(v), 6) for v in E.encode_matrix(mb)[0].tolist()]
-                r = float(booster.predict(np.array([row], dtype=np.float32))[0])
+                mrow = [round(float(v), 6) for v in E.encode_matrix(mb)[0].tolist()]
+                r = float(booster.predict(np.array([mrow], dtype=np.float32))[0])
                 buckets[bucket] = {
-                    "row": row,
+                    "row": mrow,
                     "raw": round(r, 6),
                     "xg": round(float(apply_cal(calibrators[bucket], np.array([r]))[0]), 6),
                 }
             cases.append({
                 "shot_id": ev.get("id"),
-                "location": ev.get("location"),
+                "input": inp,
                 "features": feat,
                 "buckets": buckets,
             })
             if len(cases) >= n:
-                return {"model_features": E.MODEL_FEATURES, "cases": cases}
-    return {"model_features": E.MODEL_FEATURES, "cases": cases}
+                break
+        if len(cases) >= n:
+            break
+    return {"model_features": E.MODEL_FEATURES, "feature_columns": F.FEATURE_COLUMNS, "cases": cases}
 
 
 SERVING_MD = """\
