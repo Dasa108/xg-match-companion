@@ -1,7 +1,11 @@
 // In-browser xG inference: onnxruntime-web + per-bucket isotonic calibration.
 // The three artefacts under /model/ are produced by training/export_onnx.py.
+//
+// onnxruntime-web is a large module (its wasm is ~MBs). It is loaded lazily via dynamic
+// import on the first prediction, so the match-list / setup screens never pay for it and
+// it lands in its own bundle chunk.
 
-import * as ort from "onnxruntime-web";
+import type * as Ort from "onnxruntime-web";
 
 import { type Calibrators, interp, pickBucket } from "./calibrate";
 import { BUCKET_KEEP, encodeRow, maskGroups, MODEL_FEATURES } from "./encode";
@@ -10,11 +14,9 @@ import type { ShotInput, XgResult } from "./types";
 
 export { interp, pickBucket } from "./calibrate";
 
-// Let the bundler resolve onnxruntime-web's own wasm/mjs assets. (Do NOT set
-// ort.env.wasm.wasmPaths to a /public path — Vite refuses to transform files there.)
-
 interface Loaded {
-  session: ort.InferenceSession;
+  ort: typeof Ort;
+  session: Ort.InferenceSession;
   calibrators: Calibrators;
   penaltyXg: number;
   inputName: string;
@@ -26,6 +28,12 @@ let loadingP: Promise<Loaded> | null = null;
 function load(): Promise<Loaded> {
   if (!loadingP) {
     loadingP = (async () => {
+      const ort = await import("onnxruntime-web");
+      // Single-threaded wasm: the threaded build needs SharedArrayBuffer / cross-origin
+      // isolation. One thread is plenty for a ~420 KB model, one inference per shot.
+      ort.env.wasm.numThreads = 1;
+      ort.env.wasm.proxy = false;
+
       const base = import.meta.env.BASE_URL ?? "/";
       const [spec, calibrators, modelBuf] = await Promise.all([
         fetch(`${base}model/feature_spec.json`).then((r) => r.json()),
@@ -45,6 +53,7 @@ function load(): Promise<Loaded> {
         ? "probabilities"
         : session.outputNames[session.outputNames.length - 1];
       return {
+        ort,
         session,
         calibrators,
         penaltyXg: spec.penalty_xg ?? 0.76,
@@ -56,7 +65,7 @@ function load(): Promise<Loaded> {
   return loadingP;
 }
 
-/** Kick off model download/compile early (e.g. on app mount). */
+/** Kick off model download/compile early (e.g. when the Live screen mounts). */
 export function warmModel(): void {
   void load().catch(() => {
     /* surfaced later by predictXg */
@@ -64,7 +73,7 @@ export function warmModel(): void {
 }
 
 export async function predictXg(input: ShotInput): Promise<XgResult> {
-  const { session, calibrators, penaltyXg, inputName, probName } = await load();
+  const { ort, session, calibrators, penaltyXg, inputName, probName } = await load();
   const features = featuresFromInput(input);
 
   if (input.shot_type === "penalty") {

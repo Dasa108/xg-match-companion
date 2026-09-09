@@ -5,7 +5,6 @@ import { MatchListScreen } from "./screens/MatchListScreen";
 import { SetupScreen } from "./screens/SetupScreen";
 import { LiveScreen } from "./screens/LiveScreen";
 import { ReportScreen } from "./screens/ReportScreen";
-import { warmModel } from "./xg/model";
 
 const LAST_KEY = "xg.lastMatch";
 
@@ -19,7 +18,6 @@ export function App() {
   });
   const match = useMatch(openId);
 
-  useEffect(() => warmModel(), []);
   useEffect(() => {
     try {
       if (openId) localStorage.setItem(LAST_KEY, openId);

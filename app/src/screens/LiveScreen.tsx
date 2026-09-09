@@ -5,6 +5,7 @@ import { usePlayers, useShots } from "../db/hooks";
 import {
   deleteShot, elapsedMinute, finishMatch, type Match, setClockMinute, toggleClock,
 } from "../db/schema";
+import { warmModel } from "../xg/model";
 import { playerLeaderboard, teamAggs } from "../xg/verdict";
 
 export function LiveScreen({ match, onReport }: { match: Match; onReport: () => void }) {
@@ -12,6 +13,8 @@ export function LiveScreen({ match, onReport }: { match: Match; onReport: () => 
   const shots = useShots(match.id);
   const [, tick] = useState(0);
   const [showPlayers, setShowPlayers] = useState(false);
+
+  useEffect(() => warmModel(), []);
 
   // keep the clock display ticking while it runs
   useEffect(() => {
