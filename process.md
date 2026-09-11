@@ -1091,3 +1091,67 @@ the fact and caught three (`GoalFrame.tsx`, `Pitch.tsx` ×2) still using the old
 fixed and re-verified. The Chrome extension was not connected this entire phase, so
 **no live screenshot exists of the redesign** — it's confirmed by build + grep + test
 only. Worth a manual look (`npm run dev`) before calling this done.
+
+### 6.8 The browser check — a real bug, and a real trap
+
+Next turn, the extension connected. First screenshot of the live app: the tool-row icons
+(gloves/shield/pass/reset) rendered as illegible scribbles — a genuine bug the build+test
+pass had no way to catch (nothing checks "does this render as a recognizable shape").
+
+**Diagnosis, not guessing.** Before touching the icon paths, checked whether the SVG
+*geometry* was actually malformed or whether it was a rendering/legibility problem —
+different bugs, different fixes:
+
+```js
+// via javascript_tool, in the live page:
+[...document.querySelectorAll('.tools svg.icon path')].map(p => p.getBBox())
+// -> every path's bbox sat well inside [0,20]x[0,20], no NaNs, no zero-size paths
+```
+
+The paths were geometrically sound. So the bug wasn't broken math — it was **too much
+fine stroked detail for the size**: "gloves" was four overlapping 1.5px-stroke finger
+curves, which reads as a hand at 80px and as noise at 15px. Fixed by switching the
+detailed icons (gloves, shield) to **filled silhouettes** (bold, no fine internal strokes)
+and simplifying the linear ones (pass, reset) to plainer, bigger-arrowhead shapes.
+"target" (concentric circles) needed no change — it was already bold enough.
+
+**The second bug was mine, not the app's: a stale service worker.** Mid-verification, a
+rebuilt CSS change (`legend { text-transform: uppercase }`) didn't show up in the browser
+— confirmed present in the *compiled* `dist/assets/*.css` via `grep`, so the build was
+right and the browser was wrong. The culprit: `vite-plugin-pwa`'s service worker
+precaches aggressively, and killing/restarting `vite preview` on the *same port* doesn't
+invalidate a service worker a previous visit to that origin already installed — the
+browser kept serving the old precached bundle across multiple rebuilds. Fixed the same
+way twice this session:
+```js
+const regs = await navigator.serviceWorker.getRegistrations();
+for (const r of regs) await r.unregister();
+for (const k of await caches.keys()) await caches.delete(k);
+```
+then reload. Moved to a fresh port (4174) partway through to sidestep it, but that origin
+picked up its *own* stale SW on the very next rebuild — the unregister-and-clear step is
+what actually fixes it, not a fresh port.
+
+**Verification once the extension started dropping screenshots again:** switched to
+`javascript_tool` DOM/style introspection instead of pixel screenshots — reads
+`el.getAttribute('style')` for the computed `--chance-*` custom properties, checks
+`OutcomeGlyph`'s rendered `<polygon>` points and `aria-label`, reads the report's board
+headers and verdict text directly. This confirmed the full data path end-to-end (star
+marker renders for a goal with the right gold fill, the `+0.70` G−xG delta renders in the
+new gold `--pos` color not the old green, the verdict string computes correctly, the PSxG
+column is correctly absent when unused) without needing a single working screenshot.
+
+**Learn.**
+- When something looks broken, check whether the *data/geometry* is wrong or the
+  *presentation* is wrong before changing anything — `getBBox()` on the live DOM settled
+  it in one call, instead of guessing through several path rewrites.
+- A PWA service worker is a caching layer *you* now own the invalidation of. During
+  active iteration against the same origin, unregister-and-clear before trusting what's
+  on screen — a "the code is right but the browser is wrong" moment is very often this,
+  not a phantom bug.
+- Pixel screenshots and DOM/style introspection are complementary, not substitutes — the
+  screenshot caught the icon bug (a purely visual defect no DOM read would surface); the
+  JS introspection kept verification going when screenshots stopped working, and it's
+  strictly more precise for confirming *data* reached the screen correctly (exact hex,
+  exact polygon points, exact text) than eyeballing a JPEG. Reach for whichever one
+  actually answers the question in front of you.
