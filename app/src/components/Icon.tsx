@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 
 export type IconName =
   | "target" | "gloves" | "shield" | "pass" | "download" | "reset"
-  | "play" | "pause" | "edit" | "goal-frame" | "chevron";
+  | "play" | "pause" | "edit" | "goal-frame" | "chevron" | "football";
 
 const PATHS: Record<IconName, ReactNode> = {
   target: (
@@ -14,6 +14,17 @@ const PATHS: Record<IconName, ReactNode> = {
       <circle cx="10" cy="10" r="7" />
       <circle cx="10" cy="10" r="3.5" />
       <circle cx="10" cy="10" r="0.9" fill="currentColor" stroke="none" />
+    </>
+  ),
+  // outer ring + a filled central pentagon with seams to the edge, like a ball's panels
+  football: (
+    <>
+      <circle cx="10" cy="10" r="7" strokeWidth={1.4} />
+      <polygon points="10,7 12.85,9.07 11.76,12.43 8.24,12.43 7.15,9.07" fill="currentColor" stroke="none" />
+      <path
+        d="M10 7V3M12.85 9.07L16.66 7.84M11.76 12.43L14.12 15.66M8.24 12.43L5.88 15.66M7.15 9.07L3.34 7.84"
+        strokeWidth={1.2}
+      />
     </>
   ),
   gloves: (

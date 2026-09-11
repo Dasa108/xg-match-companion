@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { Icon } from "../components/Icon";
 import { useMatches } from "../db/hooks";
 import { createMatch, deleteMatch } from "../db/schema";
 
@@ -40,7 +41,13 @@ export function MatchListScreen({ onOpen }: { onOpen: (id: string) => void }) {
 
       <section>
         <h2>Matches</h2>
-        {matches.length === 0 && <p className="empty">No matches yet — create one above to kick off.</p>}
+        {matches.length === 0 && (
+          <p className="empty">
+            <Icon name="football" size={22} className="empty-icon" />
+            <br />
+            No matches yet — create one above to kick off.
+          </p>
+        )}
         <ul className="matches">
           {matches.map((m) => (
             <li key={m.id}>

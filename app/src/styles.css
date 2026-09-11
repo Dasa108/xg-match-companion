@@ -37,13 +37,30 @@
 
 * { box-sizing: border-box; }
 
+/* Ambient chrome: a flat black page reads like an unfinished tool, not a crafted one.
+   Three layers, all baked as `body` background-image (which always paints behind real
+   content — no z-index/pseudo-element bookkeeping needed) and all opacity-capped inside
+   the SVG/gradient itself so they stay legible-behind-text rather than needing tuning via
+   blend modes: a faint grain (premium-editorial texture, breaks up flat colour banding),
+   a football line-art watermark bleeding off the top-right corner, and soft stadium-glow
+   colour blooms using the same home/away hues as the rest of the app. */
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--ink);
   font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
+  background-color: var(--bg);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640' viewBox='0 0 640 640'%3E%3Cg fill='none' stroke='%23dff2ea' stroke-width='2' stroke-opacity='0.05'%3E%3Ccircle cx='430' cy='110' r='150'/%3E%3Cpath d='M0 270H640'/%3E%3Cpath d='M640 30A230 230 0 0 1 640 400'/%3E%3C/g%3E%3Ccircle cx='430' cy='110' r='3' fill='%23dff2ea' fill-opacity='0.05'/%3E%3C/svg%3E"),
+    radial-gradient(55% 38% at 10% -8%, rgba(31, 174, 102, 0.16), transparent 60%),
+    radial-gradient(50% 34% at 105% -4%, rgba(44, 134, 209, 0.13), transparent 60%),
+    radial-gradient(70% 42% at 50% 115%, rgba(31, 174, 102, 0.08), transparent 65%);
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  background-position: 0 0, 100% 0, 0 0, 0 0, 0 0;
+  background-size: 160px 160px, min(640px, 90vw) min(640px, 90vw), auto, auto, auto;
+  background-attachment: fixed, fixed, fixed, fixed, fixed;
 }
 
 input,
@@ -88,18 +105,11 @@ header {
   letter-spacing: -0.01em;
   color: var(--ink);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
-.brand::before {
-  content: "";
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: var(--glow-accent);
-  margin-right: 7px;
-  vertical-align: middle;
-}
+.brand .icon { color: var(--accent); filter: drop-shadow(0 0 6px rgba(46, 232, 127, 0.55)); }
 .tag {
   color: var(--muted);
   font-size: 12px;
@@ -322,11 +332,12 @@ fieldset.psxg { flex-direction: column; align-items: stretch; }
 .empty {
   color: var(--muted);
   text-align: center;
-  padding: 22px 12px;
+  padding: 26px 12px;
   border: 1px dashed var(--line);
   border-radius: var(--radius-md);
   font-size: 13px;
 }
+.empty-icon { color: var(--line-strong); margin-bottom: 8px; }
 
 /* team sheets */
 .sheets { display: grid; grid-template-columns: 1fr; gap: 10px; }

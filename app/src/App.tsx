@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { Icon } from "./components/Icon";
 import { useMatch } from "./db/hooks";
 import { MatchListScreen } from "./screens/MatchListScreen";
 import { SetupScreen } from "./screens/SetupScreen";
@@ -34,6 +35,7 @@ export function App() {
     <div className="app">
       <header>
         <button className="brand" onClick={() => setOpenId(null)}>
+          <Icon name="football" size={18} />
           xG Match Companion
         </button>
         {match && (
