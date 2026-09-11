@@ -1186,3 +1186,25 @@ procedural one (stack this element behind that one; tune this blend mode until i
 right), do it that way — it needs no live visual check to trust, which matters a lot on a
 tool whose visual-check channel (the extension) has been the least reliable part of this
 whole project.
+
+### 6.10 Three named football moments, drawn as pictograms not illustrations
+
+**What.** Added a fourth background layer: three player silhouettes along the bottom edge
+— a strike, the Roberto Carlos free-kick lean (torso back, striking leg swept across the
+body, arms flung wide for the outside-of-foot curl), an overhead/bicycle kick (torso
+arched, top leg extended high, trailing leg bent). Same composition pattern as 6.9 — one
+more `url(...)` in the `body` background-image list, opacity baked into the SVG.
+
+**Why pictogram, not illustration.** Directly applying 6.7's lesson: fine anatomical
+detail (the kind a real illustration of "Roberto Carlos" would need — muscle definition,
+kit folds, facial direction) reads as noise once it's stroked thin and set to 6.5%
+opacity, the same failure mode as the over-detailed "gloves" icon. Went instead with
+Olympic-pictogram construction: each limb is one or two straight segments with a thick,
+round-capped stroke — no anatomy, just gesture. At the actual size and opacity these
+render at, gesture is all that survives anyway, so drawing more detail would have been
+wasted effort *and* risked the same illegibility bug over again.
+
+**Learn.** A lesson from one bug (icons too detailed for their size) generalizes to the
+next thing at a similar scale (silhouettes too detailed for their opacity) if you notice
+the shared constraint — "how much detail survives at this size/opacity" — rather than
+re-deriving it per asset.
