@@ -57,3 +57,13 @@ export interface XgResult {
   bucket: Bucket | "penalty";
   features: FeatureRow;
 }
+
+/** [y, z] within the goal frame (StatsBomb units: y 36-44 posts, z 0-2.67 crossbar). */
+export type GoalPoint = [number, number];
+
+export interface PsxgResult {
+  psxg: number;
+  raw: number;
+  bucket: Bucket;
+  goalmouth: GoalPoint;
+}

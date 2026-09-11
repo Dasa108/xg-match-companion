@@ -91,7 +91,10 @@ export function LiveScreen({ match, onReport }: { match: Match; onReport: () => 
               <span className="min">{s.minute}′</span>
               <span className="who">{nameOf(s.playerId)}</span>
               <span className="sxg">{s.xg.toFixed(2)}</span>
-              <span className="oc">{s.outcome.replace("_", " ")}</span>
+              <span className="oc">
+                {s.outcome.replace("_", " ")}
+                {s.psxg != null && <span className="psxg-tag"> · PSxG {s.psxg.toFixed(2)}</span>}
+              </span>
               <button className="mini danger" onClick={() => deleteShot(s.id)}>
                 ✕
               </button>

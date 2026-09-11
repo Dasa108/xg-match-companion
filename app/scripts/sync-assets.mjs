@@ -14,6 +14,11 @@ const jobs = [
   [join(repo, "models", "feature_spec.json"), join(app, "public", "model", "feature_spec.json")],
   [join(repo, "models", "calibrators.json"), join(app, "public", "model", "calibrators.json")],
   [join(repo, "training", "feature_fixtures.json"), join(app, "src", "xg", "__fixtures__", "feature_fixtures.json")],
+  // PSxG (optional, v2 feature — see spec.md 8.9)
+  [join(repo, "models", "psxg_model.onnx"), join(app, "public", "model", "psxg_model.onnx")],
+  [join(repo, "models", "psxg_feature_spec.json"), join(app, "public", "model", "psxg_feature_spec.json")],
+  [join(repo, "models", "psxg_calibrators.json"), join(app, "public", "model", "psxg_calibrators.json")],
+  [join(repo, "training", "psxg_feature_fixtures.json"), join(app, "src", "xg", "__fixtures__", "psxg_feature_fixtures.json")],
 ];
 
 for (const [src, dst] of jobs) {

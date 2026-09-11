@@ -24,6 +24,7 @@ const CSV_COLS = [
   "match", "date", "minute", "side", "team", "number", "player",
   "x", "y", "shot_type", "body_part", "under_pressure",
   "bucket", "xg", "raw", "outcome", "is_goal",
+  "psxg", "psxg_raw", "psxg_bucket", "goalmouth_y", "goalmouth_z",
 ] as const;
 
 function csvCell(v: unknown): string {
@@ -43,6 +44,8 @@ export function shotsToCsv(match: Match, players: Player[], shots: Shot[]): stri
         p?.number ?? "", p?.name ?? "",
         s.input.x, s.input.y, s.input.shot_type, s.input.body_part, s.input.under_pressure,
         s.bucket, s.xg.toFixed(4), s.raw?.toFixed(4) ?? "", s.outcome, s.outcome === "goal" ? 1 : 0,
+        s.psxg?.toFixed(4) ?? "", s.psxgRaw?.toFixed(4) ?? "", s.psxgBucket ?? "",
+        s.goalmouth?.[0] ?? "", s.goalmouth?.[1] ?? "",
       ].map(csvCell).join(",");
     });
   return [CSV_COLS.join(","), ...rows].join("\n");

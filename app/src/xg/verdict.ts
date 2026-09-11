@@ -8,6 +8,8 @@ export interface TeamAgg {
   shots: number;
   xg: number;
   goals: number;
+  psxg: number | null;     // sum of PSxG over shots that got a placement tap; null if none did
+  psxgShots: number;
 }
 
 export interface PlayerAgg {
@@ -21,17 +23,24 @@ export interface PlayerAgg {
   biggest: number;
   goals: number;
   finishingDelta: number; // goals - xg
+  psxg: number | null;
+  psxgShots: number;
 }
+
+const psxgOf = (s: Shot) => (typeof s.psxg === "number" ? s.psxg : null);
 
 export function teamAggs(match: Match, shots: Shot[]): { home: TeamAgg; away: TeamAgg } {
   const mk = (side: Side, name: string): TeamAgg => {
     const s = shots.filter((x) => x.side === side);
+    const withPsxg = s.map(psxgOf).filter((v): v is number => v !== null);
     return {
       side,
       name,
       shots: s.length,
       xg: round2(sum(s.map((x) => x.xg))),
       goals: s.filter((x) => x.outcome === "goal").length,
+      psxg: withPsxg.length ? round2(sum(withPsxg)) : null,
+      psxgShots: withPsxg.length,
     };
   };
   return { home: mk("home", match.homeName), away: mk("away", match.awayName) };
@@ -86,6 +95,7 @@ export function playerLeaderboard(shots: Shot[], players: Player[]): PlayerAgg[]
     const p = byId.get(pid);
     const xg = sum(s.map((x) => x.xg));
     const goals = s.filter((x) => x.outcome === "goal").length;
+    const withPsxg = s.map(psxgOf).filter((v): v is number => v !== null);
     out.push({
       playerId: pid,
       name: p?.name ?? "Unknown",
@@ -97,6 +107,8 @@ export function playerLeaderboard(shots: Shot[], players: Player[]): PlayerAgg[]
       biggest: round2(Math.max(...s.map((x) => x.xg))),
       goals,
       finishingDelta: round2(goals - xg),
+      psxg: withPsxg.length ? round2(sum(withPsxg)) : null,
+      psxgShots: withPsxg.length,
     });
   }
   return out.sort((a, b) => b.xg - a.xg);

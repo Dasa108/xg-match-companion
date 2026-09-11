@@ -2,12 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { Match, Outcome, Player, Side } from "../db/schema";
 import { saveShot } from "../db/schema";
+import { GoalFrame } from "../pitch/GoalFrame";
 import { Pitch, type Tool } from "../pitch/Pitch";
 import { predictXg } from "../xg/model";
+import { predictPsxg } from "../xg/psxgModel";
 import { confidenceBand, explainXg } from "../xg/reason";
 import type {
-  AssistType, BodyPart, PlayPattern, ShotContext, ShotInput, Technique, XgResult, XY,
+  AssistType, BodyPart, GoalPoint, PlayPattern, PsxgResult, ShotContext, ShotInput,
+  Technique, XgResult, XY,
 } from "../xg/types";
+
+const PSXG_OUTCOMES: Outcome[] = ["goal", "saved", "post"];
 
 const BODY: BodyPart[] = ["right_foot", "left_foot", "head", "other"];
 const SITUATION: { key: ShotInput["shot_type"]; play: PlayPattern; label: string }[] = [
@@ -51,9 +56,14 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
   const [rebound, setRebound] = useState(false);
   const [outcome, setOutcome] = useState<Outcome>("saved");
   const [showMore, setShowMore] = useState(false);
+  const [showPsxg, setShowPsxg] = useState(false);
+  const [goalmouth, setGoalmouth] = useState<GoalPoint | null>(null);
 
   const [result, setResult] = useState<XgResult | null>(null);
+  const [psxgResult, setPsxgResult] = useState<PsxgResult | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const psxgEligible = PSXG_OUTCOMES.includes(outcome);
 
   const sidePlayers = useMemo(
     () => players.filter((p) => p.side === side && p.onPitch).sort(byNumber),
@@ -97,6 +107,25 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
     };
   }, [input]);
 
+  // PSxG (optional, v2): only meaningful once the shot has a placement AND the outcome
+  // says it reached the frame. Cleared automatically if the outcome changes away from
+  // goal/saved/post so a stale placement can't attach to an off-target shot.
+  useEffect(() => {
+    if (!input || !goalmouth || !psxgEligible) return setPsxgResult(null);
+    let live = true;
+    predictPsxg(input, goalmouth).then((r) => live && setPsxgResult(r)).catch(() => live && setPsxgResult(null));
+    return () => {
+      live = false;
+    };
+  }, [input, goalmouth, psxgEligible]);
+
+  useEffect(() => {
+    if (!psxgEligible) {
+      setGoalmouth(null);
+      setShowPsxg(false);
+    }
+  }, [psxgEligible]);
+
   function place(p: XY) {
     if (tool === "shot") setShot(p);
     else if (tool === "gk") setGk(p);
@@ -120,6 +149,9 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
     setOutcome("saved");
     setTool("shot");
     setResult(null);
+    setGoalmouth(null);
+    setPsxgResult(null);
+    setShowPsxg(false);
   }
 
   async function commit() {
@@ -137,6 +169,10 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
         xg: result.xg,
         raw: result.raw,
         outcome,
+        goalmouth: psxgResult ? psxgResult.goalmouth : null,
+        psxg: psxgResult ? psxgResult.psxg : null,
+        psxgRaw: psxgResult ? psxgResult.raw : null,
+        psxgBucket: psxgResult ? psxgResult.bucket : null,
       });
       reset();
       onSaved();
@@ -265,6 +301,36 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
       )}
 
       <ChipRow legend="outcome" values={OUTCOMES} pick={outcome} set={setOutcome} fmt={(o) => o.replace("_", " ")} />
+
+      {psxgEligible && (
+        <fieldset className="psxg">
+          <legend>shot placement — PSxG (optional)</legend>
+          {!showPsxg && (
+            <button className="ghost mini" onClick={() => setShowPsxg(true)}>
+              + tap where it went
+            </button>
+          )}
+          {showPsxg && (
+            <>
+              <GoalFrame point={goalmouth} onPlace={setGoalmouth} />
+              {!goalmouth && <p className="hint">Tap the goal mouth where the ball crossed the line.</p>}
+              {goalmouth && !psxgResult && <p className="hint">computing PSxG…</p>}
+              {psxgResult && (
+                <div className="row spread psxg-result">
+                  <div>
+                    <span className="xg">{psxgResult.psxg.toFixed(2)}</span>
+                    <span className="xg-unit"> PSxG</span>
+                  </div>
+                  <div className="meta">{psxgResult.bucket} placement</div>
+                </div>
+              )}
+              <button className="ghost mini" onClick={() => { setGoalmouth(null); setShowPsxg(false); }}>
+                remove placement
+              </button>
+            </>
+          )}
+        </fieldset>
+      )}
 
       <button className="primary" disabled={!canSave} onClick={commit}>
         {saving ? "saving…" : playerId ? `Save shot (${minute}′)` : "pick a shooter to save"}

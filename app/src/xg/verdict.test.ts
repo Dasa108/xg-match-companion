@@ -31,7 +31,7 @@ describe("teamAggs", () => {
 
 describe("verdictLine", () => {
   const T = (side: "home" | "away", name: string, xg: number, goals: number) =>
-    ({ side, name, xg, goals, shots: 0 });
+    ({ side, name, xg, goals, shots: 0, psxg: null, psxgShots: 0 });
 
   it("close xG -> even game", () => {
     expect(verdictLine(T("home", "R", 1.2, 1), T("away", "C", 1.1, 1))).toMatch(/Even game/);

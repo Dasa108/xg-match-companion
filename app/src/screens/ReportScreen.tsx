@@ -3,6 +3,7 @@ import { usePlayers, useShots } from "../db/hooks";
 import { elapsedMinute, type Match, reopenMatch } from "../db/schema";
 import { downloadText, matchToJson, shotsToCsv, slugMatch } from "../xg/exportMatch";
 import { cumulativeXgSeries, xgHistogram } from "../xg/report";
+import { buildReportHtml } from "../xg/reportHtml";
 import {
   bestXgPlayer, efficiencyPick, playerLeaderboard, teamAggs, verdictLine,
 } from "../xg/verdict";
@@ -16,6 +17,7 @@ export function ReportScreen({ match, onLive }: { match: Match; onLive: () => vo
   const eff = efficiencyPick(board);
   const timeline = cumulativeXgSeries(shots, elapsedMinute(match) || 90);
   const hist = xgHistogram(shots);
+  const hasPsxg = board.some((p) => p.psxg != null);
 
   return (
     <div className="screen">
@@ -28,6 +30,9 @@ export function ReportScreen({ match, onLive }: { match: Match; onLive: () => vo
         </div>
         <div className="ftxg">
           xG {home.xg.toFixed(2)} – {away.xg.toFixed(2)} · {home.shots + away.shots} shots
+          {hasPsxg && (
+            <> · PSxG {home.psxg?.toFixed(2) ?? "—"} – {away.psxg?.toFixed(2) ?? "—"}</>
+          )}
         </div>
         <p className="verdict">{verdictLine(home, away)}</p>
       </section>
@@ -61,6 +66,7 @@ export function ReportScreen({ match, onLive }: { match: Match; onLive: () => vo
           <thead>
             <tr>
               <th>player</th><th>sh</th><th>xG</th><th>xG/sh</th><th>G</th><th>G−xG</th>
+              {hasPsxg && <th>PSxG</th>}
             </tr>
           </thead>
           <tbody>
@@ -79,10 +85,11 @@ export function ReportScreen({ match, onLive }: { match: Match; onLive: () => vo
                   {p.finishingDelta >= 0 ? "+" : ""}
                   {p.finishingDelta.toFixed(2)}
                 </td>
+                {hasPsxg && <td>{p.psxg != null ? p.psxg.toFixed(2) : "—"}</td>}
               </tr>
             ))}
             {board.length === 0 && (
-              <tr><td colSpan={6} className="muted">No attributed shots.</td></tr>
+              <tr><td colSpan={hasPsxg ? 7 : 6} className="muted">No attributed shots.</td></tr>
             )}
           </tbody>
         </table>
@@ -90,7 +97,16 @@ export function ReportScreen({ match, onLive }: { match: Match; onLive: () => vo
 
       <section>
         <h3>Export</h3>
-        <div className="row gap">
+        <p className="muted">The full report has every shot's full data; JSON/CSV are for further analysis.</p>
+        <div className="row gap wrap">
+          <button
+            className="primary"
+            onClick={() =>
+              downloadText(`${slugMatch(match)}_report.html`, buildReportHtml(match, players, shots), "text/html")
+            }
+          >
+            📄 full report
+          </button>
           <button
             onClick={() =>
               downloadText(`${slugMatch(match)}.json`, matchToJson(match, players, shots), "application/json")

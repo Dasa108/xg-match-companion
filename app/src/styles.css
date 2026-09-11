@@ -70,6 +70,7 @@ h3 { font-size: 14px; margin: 16px 0 8px; }
 .row { display: flex; align-items: center; }
 .row.gap { gap: 8px; }
 .row.spread { justify-content: space-between; }
+.row.wrap { flex-wrap: wrap; }
 .screen { display: flex; flex-direction: column; gap: 6px; }
 
 .card {
@@ -161,6 +162,19 @@ fieldset {
 fieldset select { margin-top: 4px; }
 legend { color: var(--muted); font-size: 12px; padding: 0 4px; }
 
+fieldset.psxg { flex-direction: column; align-items: stretch; }
+.goalframe {
+  width: 100%;
+  max-width: 320px;
+  max-height: 28vh;
+  display: block;
+  margin: 4px auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  touch-action: manipulation;
+}
+.psxg-result { margin: 4px 0; }
+
 .result {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -250,7 +264,7 @@ legend { color: var(--muted); font-size: 12px; padding: 0 4px; }
 .shotlog { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
 .shotlog li {
   display: grid;
-  grid-template-columns: 12px 34px 1fr 44px 74px 32px;
+  grid-template-columns: 12px 34px 1fr 44px minmax(74px, auto) 32px;
   gap: 6px;
   align-items: center;
   padding: 5px 6px;
@@ -261,7 +275,8 @@ legend { color: var(--muted); font-size: 12px; padding: 0 4px; }
 }
 .shotlog .min { color: var(--muted); }
 .shotlog .sxg { font-weight: 700; text-align: right; }
-.shotlog .oc { color: var(--muted); font-size: 12px; }
+.shotlog .oc { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.psxg-tag { color: #c084fc; }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
 .dot.goal { background: var(--goal); }
 .dot.saved { background: #1f9dff; }

@@ -4,7 +4,7 @@
 
 import Dexie, { type EntityTable } from "dexie";
 
-import type { Bucket, FeatureRow, ShotInput } from "../xg/types";
+import type { Bucket, FeatureRow, GoalPoint, ShotInput } from "../xg/types";
 
 export type Side = "home" | "away";
 export type MatchStatus = "setup" | "live" | "finished";
@@ -48,6 +48,12 @@ export interface Shot {
   raw: number | null;
   outcome: Outcome;
   createdAt: number;
+  // Post-shot xG (v2, optional) — only set when the operator tapped a goal-mouth
+  // placement for an on-target shot (goal / saved / post). See spec 8.9.
+  goalmouth?: GoalPoint | null;
+  psxg?: number | null;
+  psxgRaw?: number | null;
+  psxgBucket?: Bucket | null;
 }
 
 export const db = new Dexie("xg-match-companion") as Dexie & {
