@@ -1155,3 +1155,34 @@ column is correctly absent when unused) without needing a single working screens
   strictly more precise for confirming *data* reached the screen correctly (exact hex,
   exact polygon points, exact text) than eyeballing a JPEG. Reach for whichever one
   actually answers the question in front of you.
+
+### 6.9 Ambient chrome — ("the background is black, can we not enhance the visual appeal")
+
+**What.** Three decorative layers — fine grain texture, a football line-art watermark,
+soft colour blooms in the existing home/away hues — plus a hand-drawn football glyph
+replacing the plain accent dot next to the brand name.
+
+**Why `background-image` composition, not pseudo-elements.** All three decorative layers
+are just entries in one `body { background-image: url(...), url(...), gradient(...), ... }`
+list. A CSS `background` always paints behind an element's real children — that's true by
+definition, with no stacking-context or z-index reasoning required — whereas a `::before`/
+`::after` pseudo-element is a generated *child* and needs explicit `position: fixed` +
+negative `z-index` to guarantee it stays behind everything, which is one more thing to get
+wrong (and did, silently, until checked). Fewer moving parts, same result.
+
+**Why the opacity is baked into each layer, not tuned via CSS.** Given how unreliable
+screenshots were this session, tuning "is the grain visible enough / not too much" by
+eyeballing iterative screenshots would have been slow and fragile. Instead the SVG grain's
+`feColorMatrix` caps its own alpha at a flat 0.05, and the watermark's `stroke-opacity`/
+`fill-opacity` are set directly in the SVG markup — so the *intended* faintness is a
+property of the asset itself, verifiable by reading the number, not something that could
+silently drift if a later blend-mode or layering change altered how it composites. It
+happened to look right first try, which is the point of designing it that way rather than
+luck.
+
+**Learn.** When you can express "always behind, always this exact opacity" as a structural
+fact (background paints behind children; alpha is baked into the asset) instead of a
+procedural one (stack this element behind that one; tune this blend mode until it looks
+right), do it that way — it needs no live visual check to trust, which matters a lot on a
+tool whose visual-check channel (the extension) has been the least reliable part of this
+whole project.
