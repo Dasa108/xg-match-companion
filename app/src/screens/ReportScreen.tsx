@@ -1,4 +1,5 @@
 import { ShotMap, XgHistogram, XgTimeline } from "../components/Charts";
+import { Icon } from "../components/Icon";
 import { usePlayers, useShots } from "../db/hooks";
 import { elapsedMinute, type Match, reopenMatch } from "../db/schema";
 import { downloadText, matchToJson, shotsToCsv, slugMatch } from "../xg/exportMatch";
@@ -105,7 +106,7 @@ export function ReportScreen({ match, onLive }: { match: Match; onLive: () => vo
               downloadText(`${slugMatch(match)}_report.html`, buildReportHtml(match, players, shots), "text/html")
             }
           >
-            📄 full report
+            <Icon name="download" size={15} /> full report
           </button>
           <button
             onClick={() =>
@@ -125,7 +126,7 @@ export function ReportScreen({ match, onLive }: { match: Match; onLive: () => vo
       </section>
 
       <button className="ghost big" onClick={async () => { await reopenMatch(match.id); onLive(); }}>
-        ← reopen match
+        <Icon name="chevron" className="rot180" size={14} /> reopen match
       </button>
     </div>
   );

@@ -40,7 +40,7 @@ export function MatchListScreen({ onOpen }: { onOpen: (id: string) => void }) {
 
       <section>
         <h2>Matches</h2>
-        {matches.length === 0 && <p className="muted">No matches yet.</p>}
+        {matches.length === 0 && <p className="empty">No matches yet — create one above to kick off.</p>}
         <ul className="matches">
           {matches.map((m) => (
             <li key={m.id}>

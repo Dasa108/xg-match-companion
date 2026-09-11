@@ -4,9 +4,16 @@
 // match report (xg/reportHtml.ts), which isn't a React tree.
 
 export const PITCH_MARKINGS_SVG = `
-<rect x="-4" y="-5" width="88" height="130" fill="#0b7a43" />
+<defs>
+  <radialGradient id="pitch-turf" cx="50%" cy="8%" r="90%">
+    <stop offset="0%" stop-color="#0f8d51" />
+    <stop offset="55%" stop-color="#0b7a43" />
+    <stop offset="100%" stop-color="#075c34" />
+  </radialGradient>
+</defs>
+<rect x="-4" y="-5" width="88" height="130" fill="url(#pitch-turf)" />
 ${[0, 15, 30, 45, 60, 75, 90, 105]
-  .map((y) => `<rect x="0" y="${y}" width="80" height="15" fill="#0a7040" opacity="${(y / 15) % 2 ? 0.35 : 0}" />`)
+  .map((y) => `<rect x="0" y="${y}" width="80" height="15" fill="#0a7040" opacity="${(y / 15) % 2 ? 0.28 : 0}" />`)
   .join("\n")}
 <g stroke="#eafff2" stroke-width="0.4" fill="none" opacity="0.9">
   <rect x="0" y="0" width="80" height="120" />

@@ -2,12 +2,15 @@
 
 import type { Shot } from "../db/schema";
 import { PITCH_VIEWBOX, toSvg } from "../pitch/geometry";
+import { outcomeMarker } from "../pitch/outcomeMarker";
 import { PitchMarkings } from "../pitch/PitchMarkings";
 import type { HistogramBin, TimelinePoint } from "../xg/report";
 
-const HOME = "#35d07f";
-const AWAY = "#1f9dff";
-const GOAL = "#ffd34d";
+// Validated categorical palette (see process.md) — team identity, kept distinct from the
+// outcome-status colors used in outcomeMarker.ts.
+const HOME = "#1fae66";
+const AWAY = "#2c86d1";
+const GOAL = "#bd8a12";
 
 // --- cumulative xG timeline ------------------------------------------
 export function XgTimeline({
@@ -43,17 +46,17 @@ export function XgTimeline({
           return (
             <g key={f}>
               <line x1={pad.l} x2={W - pad.r} y1={sy(v)} y2={sy(v)} stroke="#2b3a33" strokeWidth={0.5} />
-              <text x={2} y={sy(v) + 3} fill="#9fb4aa" fontSize={8}>
+              <text x={2} y={sy(v) + 3} fill="#93ab9f" fontSize={8}>
                 {v.toFixed(1)}
               </text>
             </g>
           );
         })}
         <line x1={pad.l} x2={W - pad.r} y1={sy(0)} y2={sy(0)} stroke="#2b3a33" />
-        <text x={pad.l} y={H - 4} fill="#9fb4aa" fontSize={8}>0′</text>
-        <text x={W - pad.r} y={H - 4} fill="#9fb4aa" fontSize={8} textAnchor="end">{endMin}′</text>
-        <path d={step("home")} fill="none" stroke={HOME} strokeWidth={2} />
-        <path d={step("away")} fill="none" stroke={AWAY} strokeWidth={2} />
+        <text x={pad.l} y={H - 4} fill="#93ab9f" fontSize={8}>0′</text>
+        <text x={W - pad.r} y={H - 4} fill="#93ab9f" fontSize={8} textAnchor="end">{endMin}′</text>
+        <path d={step("home")} fill="none" stroke={HOME} strokeWidth={2.5} strokeLinecap="round" />
+        <path d={step("away")} fill="none" stroke={AWAY} strokeWidth={2.5} strokeLinecap="round" />
       </svg>
       <figcaption>
         <Key c={HOME} label={homeName} /> <Key c={AWAY} label={awayName} /> — cumulative xG
@@ -101,7 +104,7 @@ export function XgHistogram({
             <text
               x={pad.l + i * bw + bw / 2}
               y={H - pad.b + 10}
-              fill="#9fb4aa"
+              fill="#93ab9f"
               fontSize={7}
               textAnchor="middle"
             >
@@ -109,7 +112,7 @@ export function XgHistogram({
             </text>
           </g>
         ))}
-        <text x={pad.l} y={H - 4} fill="#9fb4aa" fontSize={7}>xG per shot →</text>
+        <text x={pad.l} y={H - 4} fill="#93ab9f" fontSize={7}>xG per shot →</text>
       </svg>
       <figcaption>
         <Key c={HOME} label={homeName} /> <Key c={AWAY} label={awayName} /> — shots by chance quality
@@ -119,29 +122,25 @@ export function XgHistogram({
 }
 
 // --- shot map -----------------------------------------------------
+// Shape = outcome (never color-alone, spec §11), fill = team — except a goal, which is
+// already unambiguous by its star shape and gets the gold highlight fill on top.
 export function ShotMap({ shots }: { shots: Shot[] }) {
+  const markers = shots
+    .map((s) => {
+      const [cx, cy] = toSvg(s.input.x, s.input.y);
+      const fill = s.outcome === "goal" ? GOAL : s.side === "home" ? HOME : AWAY;
+      return outcomeMarker(s.outcome, cx, cy, 1 + s.xg * 6, fill);
+    })
+    .join("\n");
   return (
     <figure className="chart">
       <svg className="pitch" viewBox={PITCH_VIEWBOX} role="img" aria-label="Shot map">
         <PitchMarkings />
-        {shots.map((s, i) => {
-          const [cx, cy] = toSvg(s.input.x, s.input.y);
-          return (
-            <circle
-              key={i}
-              cx={cx}
-              cy={cy}
-              r={1 + s.xg * 6}
-              fill={s.outcome === "goal" ? GOAL : s.side === "home" ? HOME : AWAY}
-              opacity={s.outcome === "goal" ? 0.95 : 0.7}
-              stroke="#06231a"
-              strokeWidth={0.2}
-            />
-          );
-        })}
+        {/* eslint-disable-next-line react/no-danger -- generated marker shapes, no user input */}
+        <g dangerouslySetInnerHTML={{ __html: markers }} />
       </svg>
       <figcaption>
-        <Key c={HOME} label="home" /> <Key c={AWAY} label="away" /> <Key c={GOAL} label="goal" /> — dot size ∝ xG
+        <Key c={HOME} label="home" /> <Key c={AWAY} label="away" /> <Key c={GOAL} label="goal ★" /> — shape = outcome, size ∝ xG
       </figcaption>
     </figure>
   );

@@ -5,10 +5,14 @@
 // same mechanism as the JSON/CSV export).
 
 import type { Match, Player, Shot } from "../db/schema";
-import { PITCH_MARKINGS_SVG } from "../pitch/pitchMarkingsSvg";
 import { toSvg } from "../pitch/geometry";
+import { outcomeMarker } from "../pitch/outcomeMarker";
+import { PITCH_MARKINGS_SVG } from "../pitch/pitchMarkingsSvg";
 import { cumulativeXgSeries } from "./report";
 import { bestXgPlayer, efficiencyPick, playerLeaderboard, teamAggs, verdictLine } from "./verdict";
+
+// Same validated categorical palette as the live app (process.md has the CVD check).
+const HOME = "#1fae66", AWAY = "#2c86d1", GOAL = "#bd8a12";
 
 function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
@@ -32,18 +36,18 @@ function timelineSvg(shots: Shot[], endMinute: number, homeName: string, awayNam
     .map((f) => {
       const v = maxXg * f;
       return `<line x1="${padL}" x2="${W - padR}" y1="${sy(v)}" y2="${sy(v)}" stroke="#33443c" stroke-width="1"/>`
-        + `<text x="2" y="${sy(v) + 4}" fill="#9fb4aa" font-size="11">${v.toFixed(1)}</text>`;
+        + `<text x="2" y="${sy(v) + 4}" fill="#93ab9f" font-size="11">${v.toFixed(1)}</text>`;
     })
     .join("");
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:640px">
     ${gridlines}
     <line x1="${padL}" x2="${W - padR}" y1="${sy(0)}" y2="${sy(0)}" stroke="#33443c"/>
-    <text x="${padL}" y="${H - 6}" fill="#9fb4aa" font-size="11">0'</text>
-    <text x="${W - padR}" y="${H - 6}" fill="#9fb4aa" font-size="11" text-anchor="end">${end}'</text>
-    <path d="${step("home")}" fill="none" stroke="#35d07f" stroke-width="2.5"/>
-    <path d="${step("away")}" fill="none" stroke="#1f9dff" stroke-width="2.5"/>
-    <text x="${padL}" y="16" fill="#35d07f" font-size="12">${esc(homeName)}</text>
-    <text x="${padL + 90}" y="16" fill="#1f9dff" font-size="12">${esc(awayName)}</text>
+    <text x="${padL}" y="${H - 6}" fill="#93ab9f" font-size="11">0'</text>
+    <text x="${W - padR}" y="${H - 6}" fill="#93ab9f" font-size="11" text-anchor="end">${end}'</text>
+    <path d="${step("home")}" fill="none" stroke="${HOME}" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="${step("away")}" fill="none" stroke="${AWAY}" stroke-width="2.5" stroke-linecap="round"/>
+    <text x="${padL}" y="16" fill="${HOME}" font-size="12" font-weight="700">${esc(homeName)}</text>
+    <text x="${padL + 90}" y="16" fill="${AWAY}" font-size="12" font-weight="700">${esc(awayName)}</text>
   </svg>`;
 }
 
@@ -51,14 +55,15 @@ function shotMapSvg(shots: Shot[]): string {
   const dots = shots
     .map((s) => {
       const [cx, cy] = toSvg(s.input.x, s.input.y);
-      const fill = s.outcome === "goal" ? "#ffd34d" : s.side === "home" ? "#35d07f" : "#1f9dff";
-      return `<circle cx="${cx}" cy="${cy}" r="${1 + s.xg * 6}" fill="${fill}" opacity="${s.outcome === "goal" ? 0.95 : 0.7}" stroke="#06231a" stroke-width="0.2"/>`;
+      const fill = s.outcome === "goal" ? GOAL : s.side === "home" ? HOME : AWAY;
+      return outcomeMarker(s.outcome, cx, cy, 1 + s.xg * 6, fill);
     })
     .join("\n");
-  return `<svg viewBox="-4 -5 88 130" width="100%" style="max-width:340px;background:#0b7a43;border-radius:8px">
+  return `<svg viewBox="-4 -5 88 130" width="100%" style="max-width:340px;border-radius:8px">
     ${PITCH_MARKINGS_SVG}
     ${dots}
-  </svg>`;
+  </svg>
+  <p class="meta" style="margin-top:6px">shape = outcome (★ goal, ● saved, ◆ post, ▲ blocked, ○ off target) · colour = team · size ∝ xG</p>`;
 }
 
 export function buildReportHtml(match: Match, players: Player[], shots: Shot[]): string {
@@ -111,25 +116,33 @@ export function buildReportHtml(match: Match, players: Player[], shots: Shot[]):
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
-  body { margin:0; background:#0d1512; color:#e8f1ec; font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  body { margin:0; background:#0a0f0c; color:#f2f7f4; font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased; }
   .wrap { max-width: 760px; margin: 0 auto; padding: 24px 18px 60px; }
-  h1 { font-size: 20px; margin: 0 0 2px; }
-  h2 { font-size: 15px; margin: 28px 0 8px; border-top: 1px solid #2b3a33; padding-top: 16px; }
-  .muted { color: #9fb4aa; }
-  .card { background:#16211c; border:1px solid #2b3a33; border-radius:12px; padding:16px; text-align:center; }
-  .ftscore { font-size: 26px; margin: 8px 0 4px; }
-  .ftscore b { font-size: 34px; }
-  .verdict { margin: 10px 0 0; }
+  h1 { font-size: 21px; margin: 0 0 2px; font-weight: 800; letter-spacing: -0.01em; }
+  h2 { font-size: 13px; margin: 30px 0 10px; border-top: 1px solid #2b3a33; padding-top: 18px;
+       text-transform: uppercase; letter-spacing: .07em; color: #93ab9f; font-weight: 700; }
+  .muted { color: #93ab9f; }
+  .card {
+    background: radial-gradient(90% 160% at 0% 0%, rgba(31,174,102,.16), transparent 60%),
+                radial-gradient(90% 160% at 100% 0%, rgba(44,134,209,.16), transparent 60%), #182922;
+    border:1px solid #2b3a33; border-radius:18px; padding:20px; text-align:center;
+  }
+  .ftscore { font-size: 15px; margin: 8px 0 4px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+  .ftscore b { font-size: 40px; font-weight: 900; letter-spacing: -.02em; margin: 0 10px; font-variant-numeric: tabular-nums; }
+  .verdict { margin: 12px 0 0; font-size: 14.5px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid #2b3a33; }
-  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2), th:nth-child(3), td:nth-child(3) { text-align: left; }
-  .pos { color: #35d07f; } .neg { color: #e5484d; }
-  .meta { color:#9fb4aa; font-size:12px; margin-top:16px; }
+  th, td { text-align: right; padding: 7px 8px; border-bottom: 1px solid #2b3a33; font-variant-numeric: tabular-nums; }
+  th { color:#93ab9f; font-size:11px; text-transform:uppercase; letter-spacing:.04em; font-weight:700; }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2), th:nth-child(3), td:nth-child(3) { text-align: left; font-variant-numeric: normal; }
+  tbody tr:nth-child(even) { background: rgba(255,255,255,.025); }
+  .pos { color: #bd8a12; font-weight:700; } .neg { color: #e2465c; font-weight:700; }
+  .meta { color:#93ab9f; font-size:12px; margin-top:16px; }
   @media print {
     body { background:#fff; color:#111; }
-    .card, table { background:#fff; }
+    .card { background:#fff; }
+    table { background:#fff; }
     th, td { border-color:#ccc; }
-    .muted { color:#555; }
+    .muted, h2 { color:#555; }
   }
 </style>
 </head>

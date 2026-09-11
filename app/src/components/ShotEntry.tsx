@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
+import { Icon, type IconName } from "../components/Icon";
 import type { Match, Outcome, Player, Side } from "../db/schema";
 import { saveShot } from "../db/schema";
 import { GoalFrame } from "../pitch/GoalFrame";
@@ -13,6 +14,22 @@ import type {
 } from "../xg/types";
 
 const PSXG_OUTCOMES: Outcome[] = ["goal", "saved", "post"];
+const TOOLS: [Tool, IconName, string][] = [
+  ["shot", "target", "shot"],
+  ["gk", "gloves", "keeper"],
+  ["defender", "shield", "defender"],
+  ["pass", "pass", "pass"],
+];
+
+/** A big chance (>= 0.3 xG) glows gold; smaller ones glow green, scaling with the number. */
+function chanceStyle(xg: number): CSSProperties {
+  const big = xg >= 0.3;
+  return {
+    "--chance-glow": big ? "rgba(189,138,18,0.22)" : `rgba(46,232,127,${(0.08 + Math.min(xg, 0.3) * 0.6).toFixed(2)})`,
+    "--chance-shadow": big ? "0 0 26px rgba(189,138,18,0.4)" : "0 0 20px rgba(46,232,127,0.28)",
+    "--chance-ink": big ? "#f3c968" : "var(--ink)",
+  } as CSSProperties;
+}
 
 const BODY: BodyPart[] = ["right_foot", "left_foot", "head", "other"];
 const SITUATION: { key: ShotInput["shot_type"]; play: PlayPattern; label: string }[] = [
@@ -196,33 +213,28 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
       />
 
       <div className="tools">
-        {(
-          [
-            ["shot", "◎ shot"],
-            ["gk", "🧤 keeper"],
-            ["defender", "▲ defender"],
-            ["pass", "⟶ pass"],
-          ] as [Tool, string][]
-        ).map(([t, label]) => (
+        {TOOLS.map(([t, icon, label]) => (
           <button key={t} className={tool === t ? "on" : ""} onClick={() => setTool(t)}>
-            {label}
+            <Icon name={icon} size={15} /> {label}
           </button>
         ))}
-        <button onClick={reset}>reset</button>
+        <button onClick={reset}>
+          <Icon name="reset" size={14} /> reset
+        </button>
       </div>
 
-      <div className="result">
+      <div className="result" style={result ? chanceStyle(result.xg) : undefined}>
         {!shot && <p className="hint">Tap the pitch where the shot was taken.</p>}
-        {shot && !result && <p className="hint">computing xG…</p>}
+        {shot && !result && <p className="hint loading">computing xG…</p>}
         {result && (
           <>
             <div className="row spread">
               <div>
-                <span className="xg">{result.xg.toFixed(2)}</span>
+                <span key={result.xg} className="xg pop tnum">{result.xg.toFixed(2)}</span>
                 <span className="xg-unit"> xG</span>
                 {(() => {
                   const [lo, hi] = confidenceBand(result.xg, result.bucket);
-                  return <span className="band"> {lo.toFixed(2)}–{hi.toFixed(2)}</span>;
+                  return <span className="band tnum"> {lo.toFixed(2)}–{hi.toFixed(2)}</span>;
                 })()}
               </div>
               <div className="meta">
@@ -295,7 +307,7 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
             <Chip on={rebound} onClick={() => setRebound((v) => !v)} label="rebound" />
           </fieldset>
           <p className="hint">
-            Use the <b>⟶ pass</b> tool to mark where the assist came from.
+            Use the <b><Icon name="pass" size={12} /> pass</b> tool to mark where the assist came from.
           </p>
         </>
       )}
@@ -307,18 +319,20 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
           <legend>shot placement — PSxG (optional)</legend>
           {!showPsxg && (
             <button className="ghost mini" onClick={() => setShowPsxg(true)}>
-              + tap where it went
+              <Icon name="goal-frame" size={13} /> tap where it went
             </button>
           )}
           {showPsxg && (
             <>
               <GoalFrame point={goalmouth} onPlace={setGoalmouth} />
               {!goalmouth && <p className="hint">Tap the goal mouth where the ball crossed the line.</p>}
-              {goalmouth && !psxgResult && <p className="hint">computing PSxG…</p>}
+              {goalmouth && !psxgResult && <p className="hint loading">computing PSxG…</p>}
               {psxgResult && (
                 <div className="row spread psxg-result">
                   <div>
-                    <span className="xg">{psxgResult.psxg.toFixed(2)}</span>
+                    <span key={psxgResult.psxg} className="xg pop tnum" style={{ fontSize: 28 }}>
+                      {psxgResult.psxg.toFixed(2)}
+                    </span>
                     <span className="xg-unit"> PSxG</span>
                   </div>
                   <div className="meta">{psxgResult.bucket} placement</div>

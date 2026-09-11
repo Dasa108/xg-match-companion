@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { Icon } from "../components/Icon";
+import { OutcomeGlyph } from "../components/OutcomeGlyph";
 import { ShotEntry } from "../components/ShotEntry";
 import { usePlayers, useShots } from "../db/hooks";
 import {
@@ -33,7 +35,8 @@ export function LiveScreen({ match, onReport }: { match: Match; onReport: () => 
         <Team a={home} />
         <div className="clock">
           <button className="mini" onClick={() => toggleClock(match)}>
-            {match.clockStartedAt ? "⏸" : "▶"} {minute}′
+            <Icon name={match.clockStartedAt ? "pause" : "play"} size={13} />
+            <span className="tnum">{minute}′</span>
           </button>
           <button
             className="mini ghost"
@@ -87,7 +90,7 @@ export function LiveScreen({ match, onReport }: { match: Match; onReport: () => 
         <ul className="shotlog">
           {[...shots].reverse().map((s) => (
             <li key={s.id}>
-              <span className={`dot ${s.outcome}`} />
+              <OutcomeGlyph outcome={s.outcome} />
               <span className="min">{s.minute}′</span>
               <span className="who">{nameOf(s.playerId)}</span>
               <span className="sxg">{s.xg.toFixed(2)}</span>

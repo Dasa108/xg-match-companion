@@ -511,7 +511,9 @@ a separate, optional read, not a replacement for it.
 **Tech stack (locked for v1):**
 - Frontend: responsive website — React + Vite, TypeScript, Dexie, SVG (no chart lib
   dependency required; D3 scales allowed). Service worker via Workbox for offline caching
-  only — no app-install / add-to-home-screen requirement.
+  only — no app-install / add-to-home-screen requirement. No icon font/webfont
+  dependency either — a small hand-rolled stroke-icon set (`components/Icon.tsx`) keeps
+  the app fully offline-safe with no font-loading step.
 - Inference: onnxruntime-web (wasm-only entry, lazy-loaded — §10 note below).
 - Training: Python 3.11+, LightGBM, scikit-learn (isotonic), statsbombpy, SHAP, skl2onnx.
 - No backend required to ship v1 — PSxG (§8.9) confirmed this holds even with a second
@@ -566,8 +568,15 @@ xG/
 - **Privacy:** player names are user-entered local data; no third-party analytics in v1.
 - **Licence:** StatsBomb Open Data is non-commercial — v1 is non-commercial. Revisit before
   any paid release.
-- **Accessibility:** large tap targets (≥ 44 px), colour-blind-safe outcome palette,
-  works one-handed portrait.
+- **Accessibility:** large tap targets (≥ 44 px), works one-handed portrait.
+  **Colour-blind-safe outcome palette — done:** shot outcomes are never color-alone —
+  each has its own shape (★ goal, ● saved, ◆ post, ▲ blocked, ○ off target) *and* a
+  validated color (`app/src/pitch/outcomeMarker.ts`). Team identity (home/away),
+  value-judgement (pos/neg), and outcome-status use three separate color pairs/sets, each
+  run through the dataviz-skill validator (OKLab ΔE ≥ 8 CVD separation, ≥ 15 normal-vision,
+  ≥ 3:1 contrast, all in the app's actual dark surface) rather than eyeballed — see
+  process.md for the numbers. The one accepted WARN (pos↔neg CVD ΔE 7.4) is covered by the
+  existing `+`/`−` sign as secondary encoding.
 
 ---
 

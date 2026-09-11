@@ -30,7 +30,7 @@ export function TeamSheet({ matchId, side, name, players }: Props) {
   }
 
   return (
-    <div className="sheet">
+    <div className={`sheet side-${side}`}>
       <h3>
         {name} <span className="muted">· {players.length}</span>
       </h3>

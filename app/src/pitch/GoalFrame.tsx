@@ -58,7 +58,7 @@ export function GoalFrame({ point, onPlace }: Props) {
       <line x1={GOAL_CENTER_Y} y1={svgY(0)} x2={GOAL_CENTER_Y} y2={svgY(-0.2)} stroke="#eafff2" strokeWidth={0.08} opacity={0.5} />
 
       {point && (
-        <circle cx={point[0]} cy={svgY(point[1])} r={0.5} fill="#ffd34d" stroke="#06231a" strokeWidth={0.1} />
+        <circle cx={point[0]} cy={svgY(point[1])} r={0.5} fill="var(--pos)" stroke="#06231a" strokeWidth={0.1} />
       )}
     </svg>
   );

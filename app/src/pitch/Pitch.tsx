@@ -44,9 +44,9 @@ export function Pitch({ tool, shot, gk, defenders, passOrigin, onPlace, onRemove
       {shotSvg && (
         <polygon
           points={`${shotSvg[0]},${shotSvg[1]} 36,0 44,0`}
-          fill="#ffd34d"
+          fill="var(--pos)"
           opacity={0.16}
-          stroke="#ffd34d"
+          stroke="var(--pos)"
           strokeWidth={0.2}
         />
       )}
