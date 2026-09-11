@@ -776,3 +776,186 @@ phone; the 14 MB wasm cold-download), and the real-match trial.
 **UX debt noted:** `reset()` keeps body-part / situation / pressure between shots
 (deliberate, but surprised me once); the xG-timeline hugs the axis with only a couple of
 early shots.
+
+---
+
+## Phase 5 — PSxG (post-shot xG) + downloadable full report  ✅
+
+User ask: pull in the v2 ideas that *don't* need a server, keep PSxG **optional**, and add
+a "download everything from the match" report. Landed as a second full training pipeline
+(same rigor as M1) plus the app wiring, and a self-contained report document.
+
+### 5.1 Which v2 ideas actually needed a server — and which didn't
+
+**What.** Sorted the deferred list (spec §2) into two piles before writing code:
+
+| needs a server | doesn't |
+|---|---|
+| multi-device/operator sync | PSxG (another ONNX model, runs client-side) |
+| cloud accounts, cross-device history | SHAP attribution / calibrated intervals |
+| retraining from many operators' matches | game-state feature experiment |
+
+**Why.** The dividing line is whether state has to move *between* devices. Anything that
+stays on one operator's phone was already static-hostable (see the earlier "isn't our
+site not static" exchange) — PSxG is just a bigger model doing the same client-side trick
+as the first one. Retraining-from-the-field is the one that genuinely needs somewhere
+central to collect shots from devices that never talk to each other otherwise.
+
+**Learn.** When a request says "add the v2 features that don't need X", the first useful
+step is a table, not code — sort the list by the actual constraint before estimating
+effort. It also stops scope creep: "add v2 features" alone could have meant six things;
+the table made it obvious only two were in scope this round.
+
+### 5.2 Designing PSxG: a second model, deliberately not a bigger first model
+
+**What.** PSxG answers "given this shot reached the frame with this placement, how likely
+was it to beat the keeper?" — a different question from pre-shot xG, built as a
+**separate** ONNX model (`psxg_features.py`, `psxg_train.py`, `psxg_model.onnx`) that
+*imports* the pre-shot feature code rather than extending it.
+
+**Why not just add a `placement` feature to the existing model?** Because placement is
+only known *after* the ball is struck. Feeding it into the pre-shot model would make
+"pre-shot xG" secretly depend on the outcome — precisely the leak spec §8.3's exclusion
+table exists to prevent ("shot placement ... is post-shot info, not pre-shot xG"). Keeping
+it a structurally separate model, importing `features_from_input` rather than editing it,
+makes that leak impossible by construction rather than by discipline.
+
+**Learn.** When a new signal is only available *after* the thing you're predicting has
+happened, that's a hard boundary, not a feature to add carefully. Put it in a different
+model. The "import, don't extend" pattern (`psxg_features.py` imports `features.py`,
+never the reverse) is a cheap way to make an architectural rule mechanically enforced —
+a circular import would fail immediately if anyone tried to route pre-shot xG through the
+post-shot module.
+
+### 5.3 Finding the goal-frame coordinate scale from real data
+
+**What.** Before writing features, pulled real StatsBomb shots with a 3-component
+`end_location` to see what the z-axis (height) actually measures:
+
+```python
+outcome, [x, y, z] = "Saved", [118.9, 42.3, 1.8]   # not always at the goal line (x=120) —
+                                                     # "Saved" is recorded where the keeper
+                                                     # touched it, which can be short
+```
+
+Range: z from 0 to ~7.8 (most "way over the bar" shots are off-target and irrelevant to
+PSxG). Cross-referenced against the outcome vocabulary (`Goal`, `Saved`, `Post`,
+`Saved Off Target`, `Saved to Post`, `Off T`, `Blocked`, `Wayward`) to decide which counted
+as "on target" for training: the five that get a recorded 3D point.
+
+**Learn.** Don't assume a data field's meaning from its name — pull a sample and look.
+`end_location` sounds like "where the shot crossed the goal line", but for saves it's
+"where the keeper stopped it", which is a real x-value short of 120, not always right at
+the line. That distinction didn't end up mattering for the feature (only y, z are used),
+but *knowing* it mattered for deciding what "on target" even means for this dataset.
+
+### 5.4 Goal-mouth features + monotone constraints
+
+**What.** Six features from the (y, z) placement (`gm_abs_dy`, `gm_z`, `gm_dist_post`,
+`gm_dist_bar`, `gm_far_post`, `gm_corner_dist`), each with a monotone constraint reasoned
+out the same way as the pre-shot model's (§8.9): closer to a post or corner → harder to
+save → higher PSxG; far-post placement → keeper has further to travel → higher PSxG.
+
+**Why `gm_far_post` needed the shot's own y, not just the placement's.** "Far post" only
+means something *relative to where the shot came from* — a placement at y=44 is far-post
+for a shooter at y=30 and near-post for one at y=50. The feature function takes both
+`shot_y` and the placement, `dy * (shot_y - center) < 0` catches "opposite side from the
+shooter". Small thing, easy to get backwards silently (the model would just look a bit
+worse, not error) — worth a comment explaining the sign logic, not just the formula.
+
+### 5.5 The baseline that actually tests the hypothesis
+
+**What.** PSxG's "beat the baseline" gate uses the **pre-shot xG model's own prediction,
+re-calibrated for the on-target population** — not a fresh logistic regression.
+
+**Why.** The question PSxG exists to answer is "does placement add information *beyond*
+what the pre-shot situation already told you". The fairest baseline is therefore the best
+thing you'd have *without* placement: the existing model. Re-calibrating it (isotonic, fit
+on train+calib+val, on-target rows only) matters because the on-target population
+converts at 27% vs the general 9.6% — the pre-shot model's calibrators were fit for the
+wrong base rate, and comparing raw uncalibrated log loss would just measure that mismatch,
+not the value of placement.
+
+**Result:** full-bucket log loss 0.372 vs baseline 0.507, AUC 0.879 vs 0.772 — a very
+large, expected gap (placement is famously the dominant signal for on-target shot
+outcomes in the analytics literature). Confirms the feature engineering is sound before
+trusting anything downstream.
+
+**Learn.** "Beats a baseline" is only a meaningful gate if the baseline is the *honest*
+alternative someone would reach for otherwise, evaluated fairly (same population, same
+calibration effort). A strawman baseline (predict the base rate, or an uncalibrated
+model on a shifted population) passes trivially and proves nothing.
+
+### 5.6 Reusing the pipeline, not rewriting it
+
+**What.** `psxg_train.py` imports `datasplit.assign_split` / `build_training_matrix` /
+`apply_bucket_mask` unchanged — the pre-shot completeness-bucket dropout/jitter machinery
+just works on the PSxG dataframe too, because the extra `gm_*` columns aren't in
+`FEATURE_GROUPS` so the masking helpers pass them through untouched. `psxg_encode_matrix`
+is `encode.encode_matrix(df)` (58 pre-shot columns) with 6 goalmouth columns appended.
+
+**Learn.** Good factoring pays off the second time you need it, not the first. Nothing
+in `datasplit.py`/`encode.py` was written with PSxG in mind — it was written to operate on
+*whatever columns a `FEATURE_GROUPS`-shaped dataframe has*, which turned out to be exactly
+the right abstraction boundary for "a second dataset that shares most of its columns with
+the first."
+
+### 5.7 App side: lazy-load dedup, and a UI that's truly optional
+
+**What.** `app/src/xg/psxgFeatures.ts` + `psxgModel.ts` mirror the training-side split.
+`ShotEntry` shows a **"+ tap where it went"** control only once the outcome is
+`goal`/`saved`/`post`; tapping it reveals `pitch/GoalFrame.tsx` (a small face-on goal
+diagram — y across, z height). Saving a shot never requires this step.
+
+**Gotcha avoided, not hit:** both `model.ts` and `psxgModel.ts` dynamically
+`import("onnxruntime-web/wasm")`. Checked the build output rather than assuming — Rollup
+dedupes identical dynamic-import specifiers from different modules into **one** shared
+chunk, so loading PSxG after the pre-shot model costs only the extra ~755 KB `.onnx`
+fetch, not a second 14 MB wasm download. Worth confirming with `npm run build` output,
+not just trusting that it should work that way.
+
+**Learn.** "Optional" has to be true at every layer, not just the top UI toggle: the
+`useEffect` computing PSxG is gated on `goalmouth && psxgEligible`, a separate effect
+clears the placement automatically if the outcome changes away from an eligible one (so a
+stale placement can't silently attach to an off-target shot), and `commit()` sends
+`null`s for every PSxG field when nothing was placed rather than omitting them — keeping
+the shape of every `Shot` record identical whether or not PSxG was used.
+
+### 5.8 The downloadable full report
+
+**What.** `xg/reportHtml.ts` builds one self-contained HTML file per match: score,
+verdict, an inline-SVG xG timeline and shot map (string-built versions of the same charts,
+sharing the exact pitch-marking SVG with the live app via `pitch/pitchMarkingsSvg.ts`),
+the player leaderboard, and a complete per-shot table — every field the app collected.
+No server, no external assets, opens from disk, has a `@media print` fallback for
+"Save as PDF".
+
+**Why a shared markings string instead of two implementations.** `PitchMarkings.tsx` used
+to hold the pitch-line JSX directly. Moved the markup into a plain string constant
+(`PITCH_MARKINGS_SVG`) that the React component renders via `dangerouslySetInnerHTML` and
+the (non-React) report builder embeds directly — one source of truth for what the pitch
+looks like, instead of two drawings that could quietly drift apart.
+
+**Why HTML and not PDF.** A PDF needs either a library (bundle weight, another dependency
+to keep working offline) or a server (ruled out). An HTML file needs neither: it's
+self-describing, opens anywhere, and the browser's own "Print → Save as PDF" covers the
+PDF use case for free. Kept the design honest about what it actually is.
+
+**Tested with:** `reportHtml.test.ts` — checks the doc is well-formed, that team/player
+names are **HTML-escaped** (a `<script>` in a player name must not execute when the file
+is opened), that the PSxG column only appears when some shot actually has one, and that
+an empty match doesn't crash the builder.
+
+### 5.9 Totals
+
+**Training:** `training/psxg_*.py` (6 new scripts), `models/psxg_*` (5 new files, incl.
+`psxg_model.onnx` 755 KB), release gate PASS.
+**App:** 2 new `xg/` modules + 2 new tests (227 PSxG parity + 1 ONNX inference), 1 new
+pitch component (`GoalFrame`), 1 new export module (`reportHtml.ts` + 1 test file),
+schema/verdict/export updates. **587 tests total, build clean** (13 precache entries,
+~15.2 MB — both models fit inside the offline cache from §4.5).
+**Spec:** new §8.9, updates through §2/§3/§5/§6/§7/§9/§10/§11/§12/§13.
+
+Not yet done: a browser click-through of the PSxG flow specifically (the extension was
+down for this phase) — headless coverage is strong (parity + ONNX inference for both
+models) but the goal-frame tap widget itself hasn't been seen rendering in a real browser.
