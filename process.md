@@ -1208,3 +1208,55 @@ wasted effort *and* risked the same illegibility bug over again.
 next thing at a similar scale (silhouettes too detailed for their opacity) if you notice
 the shared constraint — "how much detail survives at this size/opacity" — rather than
 re-deriving it per asset.
+
+### 6.11 Correction: "stick men" rejected — solid capsule silhouettes instead
+
+**What happened.** User feedback on 6.10, verbatim: *"i dont want stick men i want the
+exact shadows this is a personal website so it wont matter."* Two things in that sentence
+matter separately: (1) the pictograms genuinely read as thin wireframe stick figures, not
+"shadows" — a real human shadow is a solid mass, not a skeleton of lines; (2) "personal
+website so it wont matter" is explicit permission to spend more effort/detail than 6.10's
+legibility-driven minimalism assumed was necessary. 6.10 over-applied the icon-legibility
+lesson (6.7) — that lesson is about *fine anatomical detail* reading as noise at small
+size/low opacity, not about *line thickness overall*. A stick figure and a solid silhouette
+can carry the identical amount of pose detail; the difference is purely whether the strokes
+are thick enough, and layered densely enough, to read as filled body mass instead of wire.
+
+**Fix — same three poses, rebuilt as solid capsules.** Kept the strike / Roberto Carlos
+lean / bicycle kick poses and the "gesture only, no anatomy" level of detail (that part of
+6.10's reasoning was right), but replaced each thin joint-to-joint line with a *thick*
+round-capped stroke sized as a fraction of the whole figure (stroke-width 20 for the torso
+down to 9 for hands/feet) plus a filled circle for the head. A round-capped stroke is
+already a filled capsule shape when rendered — no separate outline path needed.
+
+**The seam bug this technique has to avoid.** Where two thick capsules meet at a joint
+(shoulder, hip), they overlap. If each shape's own opacity is set via `stroke-opacity`/
+`fill-opacity` (the mechanism 6.9's grain and watermark correctly use for *non-overlapping*
+art), overlapping semi-transparent shapes composite darker where they cross — visible
+seams at every joint, the opposite of "one solid shadow." Fix: give every shape in a
+figure *full* opacity internally, wrap the whole figure in one `<g opacity="0.06">`. SVG
+`opacity` on a group renders the group to an offscreen buffer first and applies the fade
+once to the finished buffer, so overlapping opaque shapes inside it merge as a flat union
+with no double-darkening. `fill-opacity`/`stroke-opacity` have no such isolation — they're
+per-primitive and always compositing straight onto whatever's beneath, overlaps included.
+Same "opacity baked into the asset, not tuned live" philosophy as 6.9, just the group form
+of it instead of the per-shape form, because per-shape was the wrong tool for shapes that
+overlap.
+
+**Verified in browser** (port 4177, cleared the now-routine stale service worker first):
+full-page screenshot showed three chunky, unambiguously solid dark figures along the
+bottom edge — a kicking stride, a leaning-back free-kick swing, an arched bicycle-kick
+shape — no wireframe read. A follow-up zoomed screenshot to check per-pose fidelity hit
+the session's recurring `Page.captureScreenshot` timeout after a couple of retries; per the
+standing guidance not to loop on flaky tool calls, stopped there — the full-page shot was
+already sufficient confirmation the "solid shadow, not stick man" goal was met. 587 tests
+unchanged (pure CSS), build clean.
+
+**Learn.** A design lesson has a scope, and misapplying it outside that scope is its own
+class of mistake distinct from not having the lesson at all. 6.7's lesson was "fine detail
+doesn't survive small/faint rendering" — true, and still true here — but it doesn't imply
+"therefore keep every stroke thin," which is a different, unrelated design choice that
+happened to ride along with the pictogram approach. When a user names the actual visual
+target precisely ("shadow" implies filled mass, a specific and checkable property — not a
+vague "make it better"), that word choice is itself the spec; matching it beats
+re-deriving an aesthetic from an adjacent past lesson.
