@@ -18,31 +18,32 @@ const PATHS: Record<IconName, ReactNode> = {
   ),
   gloves: (
     <>
-      <path d="M6.5 12.5c-1.5 0-2.5-1.2-2.5-2.6 0-1.6 1.3-2.9 1.3-4.4 0-.7.5-1.2 1.1-1.2s1 .5 1 1.2v3" />
-      <path d="M7.4 8.5V4.9c0-.7.5-1.3 1.1-1.3s1.1.6 1.1 1.3v3.4" />
-      <path d="M9.6 8.2V4.6c0-.7.5-1.2 1.1-1.2s1.1.5 1.1 1.2v3.8" />
-      <path d="M11.8 8.6V6c0-.7.5-1.2 1-1.2.6 0 1.1.5 1.1 1.2v5.6c0 2.6-1.8 4.6-4.4 4.6H8.2c-1.7 0-2.7-.7-3.5-1.9" />
+      <path
+        d="M10 3.2c2.7 0 4.8 2.9 4.8 6.4v3.1c0 3-2.1 5.3-4.8 5.3s-4.8-2.3-4.8-5.3V9.6c0-3.5 2.1-6.4 4.8-6.4z"
+        fill="currentColor"
+        stroke="none"
+      />
+      <path d="M13.6 7.6c1.3-1 2.9-.4 2.9 1.3 0 1.9-1.1 3.6-2.5 4.1" strokeWidth={1.7} />
     </>
   ),
-  shield: <path d="M10 3l6 2.2v4.3c0 4-2.6 6.6-6 7.5-3.4-.9-6-3.5-6-7.5V5.2L10 3z" />,
+  shield: <path d="M10 3l6 2.2v4.3c0 4-2.6 6.6-6 7.5-3.4-.9-6-3.5-6-7.5V5.2L10 3z" fill="currentColor" stroke="none" />,
   pass: (
     <>
-      <path d="M3.5 13.5c3.5.5 9-1 13-7" />
-      <path d="M12.5 5.2l4-1.2-.7 4.1" />
+      <path d="M4.5 15.5L15.5 4.5" strokeWidth={1.8} />
+      <path d="M8 4.5h7.5V12" strokeWidth={1.8} />
     </>
   ),
   download: (
     <>
-      <path d="M5 3.5h7l3 3v10a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-13z" />
-      <path d="M12 3.5V7h3" />
-      <path d="M10 9.5v5" />
-      <path d="M7.5 12l2.5 2.5 2.5-2.5" />
+      <path d="M10 3v9.5" strokeWidth={1.8} />
+      <path d="M5.8 8.7L10 13l4.2-4.3" strokeWidth={1.8} />
+      <path d="M4 16.5h12" strokeWidth={1.8} />
     </>
   ),
   reset: (
     <>
-      <path d="M15.5 10a5.5 5.5 0 1 1-1.7-4" />
-      <path d="M15.8 3.2v3.4h-3.4" />
+      <path d="M4.3 10a5.7 5.7 0 1 0 1.8-4.2" strokeWidth={1.8} />
+      <path d="M4 3.5v3.8h3.8" strokeWidth={1.8} />
     </>
   ),
   play: <path d="M6 4l10 6-10 6V4z" fill="currentColor" stroke="none" />,
