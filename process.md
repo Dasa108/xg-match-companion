@@ -959,3 +959,135 @@ schema/verdict/export updates. **587 tests total, build clean** (13 precache ent
 Not yet done: a browser click-through of the PSxG flow specifically (the extension was
 down for this phase) — headless coverage is strong (parity + ONNX inference for both
 models) but the goal-frame tap widget itself hasn't been seen rendering in a real browser.
+
+---
+
+## Phase 6 — Visual redesign  ✅
+
+User ask: make the app look better, "sports broadcast" direction, suggestions first. This
+phase is as much about *how to validate a design decision* as the decisions themselves —
+the color system in particular was computed, not eyeballed.
+
+### 6.1 Suggestions before code
+
+**What.** Before touching anything, wrote out a catalogued list of what was actually there
+(one accent color doing several jobs, no type scale, no motion, emoji as icons, outcome
+dots that were color-only) grouped into Quick / Moderate / Bigger tiers, and asked two
+things: how much scope, and which aesthetic direction. Got "Quick + Moderate" and "sports
+broadcast" back.
+
+**Why ask instead of just building something.** Visual direction is a taste call with no
+objectively-right answer — "clean dashboard" and "sports broadcast" are both defensible
+and would produce genuinely different CSS. Guessing wrong means redoing real work; a
+2-question, 30-second check avoids that for the cost of one round-trip. Scope (Quick vs
+Quick+Moderate vs everything) changes how much there is to review at once — also worth
+asking rather than assuming "more is better."
+
+### 6.2 The color system was computed, not chosen
+
+**What.** Loaded the `dataviz` skill (its own trigger rule: read it *before* choosing
+chart colors) and ran its OKLab-based validator
+(`scripts/validate_palette.js "<hex,...>" --mode dark --surface "<panel-hex>"`) on every
+candidate palette before it went in the CSS. It checks five things a human can't eyeball
+reliably: OKLCH lightness band, chroma floor, CVD separation (simulated protan/deutan/
+tritan ΔE), normal-vision separation, and WCAG contrast — all against the *app's actual
+dark surface*, not a generic assumption.
+
+**Iteration, not one-shot.** First candidate (brighter, more "neon" — closer to what
+"broadcast" suggested) failed the lightness-band check outright (too light for a dark
+surface — reads as glowing/washed-out, not bold). Darkened each hue, re-ran, still one
+color (gold) too light — darkened again — passed. Then checking the *outcome-status* set
+(goal/saved/post/blocked) surfaced a real problem: the violet I'd picked for "post" and
+the blue for "saved" were nearly indistinguishable to a deuteranope (ΔE 2.3, a hard fail —
+below even the "needs a label" floor). Shifted the violet toward magenta; re-validated;
+passed cleanly (ΔE 11.2).
+
+```
+node validate_palette.js "#1fae66,#2c86d1,#bd8a12,#e2465c,#9d5ce0" --mode dark --surface "#16211c"
+  [FAIL] CVD separation   worst adjacent #9d5ce0↔#2c86d1 ΔE 2.3 (deutan)   <- violet vs blue, real problem
+                          ↓ shift violet toward magenta (#9d5ce0 -> #c23a8f)
+  [PASS] CVD separation   worst adjacent #c23a8f↔#2c86d1 ΔE 11.2 (deutan)  <- fixed
+```
+
+**Learn.**
+- Run the validator *per usage scope*, not once over every color in the app mashed
+  together. A flat "all 6 colors as one palette" check produced a spurious FAIL (magenta
+  vs red, ΔE 11.1) that doesn't matter in practice — those two never appear in the same
+  legend or list; one is a shot-outcome color, the other a delete-button/delta color, in
+  different components. Validating home/away, pos/neg, and outcome-status as three
+  separate 2-/2-/4-way palettes (their actual contexts) gave the real, actionable answer:
+  all three pass. The lesson generalizes past color: check a design rule against how
+  something is *actually seen together*, not against an arbitrary superset.
+- A WARN is not automatically a problem to chase away — it's a note about what has to be
+  true elsewhere. The pos/neg pair sits in the 6–8 CVD floor band (legal only with
+  secondary encoding), and it already had one: the `+`/`−` sign prefix on every delta. No
+  code change needed there, just confirming the mitigation already existed before moving
+  on — cheaper than re-picking colors to force a clean pass.
+
+### 6.3 Decoupling "which shape" from "which color"
+
+**What.** `pitch/outcomeMarker.ts` draws five distinct shapes (★ goal, ● saved, ◆ post,
+▲ blocked, ○ off-target) but takes the **fill color as a parameter** rather than looking
+it up internally. The shot log colors by outcome (`OUTCOME_COLOR[outcome]`); the shot map
+colors by *team* instead (home/away, gold only for goals) because that's the more useful
+read at a glance on a spatial map. Same shape vocabulary, two different color mappings,
+one function.
+
+**Why this needed deciding explicitly.** My first instinct was "shape AND color both mean
+outcome, everywhere" — simpler to describe. But the shot map's real job is "who created
+this chance and how big was it", not "what happened to it" (that's what the shot log is
+for) — forcing outcome-color onto the map would have made team identity, the thing a
+coach actually scans the map for, disappear. Separating the *shape* vocabulary (always
+outcome, for the accessibility guarantee) from the *color* mapping (contextual, per
+chart) let both charts answer their own question without a second shape system.
+
+**Learn.** When two views need "the same visual language" but serve different questions,
+look for the actual invariant (here: the *shapes*) and parameterize the rest, rather than
+either duplicating the whole encoding or forcing one chart's mapping onto the other.
+
+### 6.4 One marker function, two renderers, again
+
+**What.** `outcomeMarker()` is a pure string-builder — no React — used two ways: wrapped
+in `dangerouslySetInnerHTML` inside a `<g>` for the live `ShotMap` (Charts.tsx) and called
+directly as a string inside `reportHtml.ts`'s non-React document builder. Identical to the
+`pitchMarkingsSvg.ts` pattern from M4 (one pitch-lines string, two renderers) — same
+problem shape, same fix, second time using it without having to re-derive it.
+
+**Learn.** This is the second time "one visual element, needed in both a React tree and a
+plain-string HTML document" showed up (pitch markings, now outcome markers), and both
+times the fix was the same: keep the generator pure and string-based, let React wrap it
+rather than own it. Worth recognizing as a house pattern for this codebase rather than
+solving it fresh each time.
+
+### 6.5 Tying the glow to the data, not just the mood
+
+**What.** The live xG card's background glow color isn't fixed — `chanceStyle(xg)` in
+`ShotEntry.tsx` picks gold for a "big chance" (≥ 0.3 xG, the rough threshold real xG
+commentary uses for the phrase) and green scaling with magnitude otherwise, set via CSS
+custom properties (`--chance-glow`, `--chance-shadow`, `--chance-ink`) consumed by
+`.result`'s `radial-gradient` and the number's `text-shadow`.
+
+**Why.** "Sports broadcast" as a direction is easy to turn into empty decoration (glows
+because glows look exciting). Tying the one animated/colored element on the page to an
+actual number the operator needs to read (this shot mattered more than that one) makes it
+information, not just mood — and it was nearly free, since the xG value was already being
+computed and rendered right there.
+
+### 6.6 The number pop, without an animation library
+
+**What.** `<span key={result.xg} className="xg pop tnum">` — changing `key` forces React
+to unmount and remount the element, which restarts its CSS `animation: pop 340ms` from
+scratch on every distinct xG value. No JS animation code, no dependency.
+
+**Learn.** A lot of "animate on value change" asks are answerable with a CSS keyframe plus
+a `key` that changes with the value — reach for a remount before reaching for a library or
+hand-rolled `useEffect` + `requestAnimationFrame` timer.
+
+### 6.7 Verification: strong but not complete
+
+Build clean, 587 tests pass (unchanged — this was a pure CSS/markup pass, no serving-path
+logic touched), grepped the whole `src/` tree for leftover pre-redesign hex codes after
+the fact and caught three (`GoalFrame.tsx`, `Pitch.tsx` ×2) still using the old gold —
+fixed and re-verified. The Chrome extension was not connected this entire phase, so
+**no live screenshot exists of the redesign** — it's confirmed by build + grep + test
+only. Worth a manual look (`npm run dev`) before calling this done.
