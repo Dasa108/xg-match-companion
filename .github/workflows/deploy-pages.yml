@@ -39,6 +39,10 @@ jobs:
       - name: Build
         working-directory: app
         run: npm run build
+        env:
+          # Only this CI build targets the Pages subpath; local builds stay at root "/"
+          # so `npm run preview` keeps working — see the comment in vite.config.ts.
+          GH_PAGES: "true"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

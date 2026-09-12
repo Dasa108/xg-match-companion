@@ -6,12 +6,18 @@ import { VitePWA } from "vite-plugin-pwa";
 // site has been opened with a connection it works fully offline pitchside. No install
 // prompt / add-to-home-screen (spec §10); it just registers and caches.
 //
-// `base`: GitHub Pages serves a project site from a /<repo-name>/ subpath, not root, so a
-// production build needs every asset URL prefixed with it — get this wrong and the page
-// loads but every JS/CSS/model request 404s. Only applied for `vite build`, never `vite
-// dev`/`vite preview`, so local development still runs at plain `/`.
-export default defineConfig(({ command }) => ({
-  base: command === "build" ? "/xg-match-companion/" : "/",
+// `base`: GitHub Pages serves a project site from a /<repo-name>/ subpath, not root, so
+// that build needs every asset URL prefixed with it — get this wrong and the page loads
+// but every JS/CSS/model request 404s (or, worse, silently falls back to index.html and
+// the app just doesn't mount — no error, blank screen; this bit us once already).
+// Gated on an explicit GH_PAGES env var, NOT on `command === "build"` — `vite preview`
+// only serves whatever `vite build` already baked into dist/ as static files, it doesn't
+// re-derive the base for its own server, so a build made for the Pages subpath is *always*
+// broken under local `npm run preview` regardless of what command preview itself reports.
+// The CI workflow sets GH_PAGES=true; a plain local `npm run build` does not, so
+// build/dev/preview/test all agree on root "/" locally.
+export default defineConfig(() => ({
+  base: process.env.GH_PAGES ? "/xg-match-companion/" : "/",
   plugins: [
     react(),
     VitePWA({
