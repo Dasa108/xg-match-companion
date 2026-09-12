@@ -1416,3 +1416,59 @@ existed and was correct; the whole feature was one new persisted number, one der
 function reading data that already existed, and one button reusing an existing action
 pattern. Recognizing "this fits the existing shape" avoided inventing a parallel half-timer
 that would have had to be kept in sync with the real one by hand.
+
+### 6.14 The background photo turned out to be copyrighted — swapped for original art
+
+**What happened.** Asked "push it to GitHub." No remote existed yet, so before creating
+one the question of visibility came up — and that surfaced something worth resolving
+first: 6.13's background photo was a stock image of unknown licence. Asked the user
+directly rather than guess; they confirmed **it is copyrighted**, and asked for an anime-
+style replacement generated instead if the photo itself couldn't be used.
+
+**Why this wasn't "just make the repo private."** Private would have sidestepped *public
+redistribution*, but the photo was still a copyrighted asset the app didn't have clear
+rights to, sitting in the repo either way. The user's own follow-up treated "can we use
+it" as the real question, not just "can we publish it" — worth taking at face value rather
+than resolving it at the narrower visibility question I'd originally asked.
+
+**No image-generation tool was available** (checked via `ToolSearch` — nothing in this
+session's toolset produces a raster image from a prompt). The fallback was to hand-build
+the "anime style" as original vector art instead: bold black outlines, flat cel-shaded
+fills, an energy-burst splash and speed lines radiating from a football — which is a
+legitimate reading of "anime style" (that aesthetic *is* cel-shaded flat-color line art)
+and, being original work, carries no copyright question to begin with.
+
+**How it was actually built.** Hand-typing precise radiating shard/sparkle coordinates
+without a live preview is exactly the kind of task that goes wrong blind, so it was
+generated programmatically instead: a Python script (throwaway, not committed — same
+treatment as 6.13's photo-preprocessing script) computed the ball's pentagon panels and a
+burst of angular shard polygons + speed-line arcs + sparkle stars at chosen angles/radii
+around a center point, biased denser toward one side (echoing the original photo's
+diagonal splash direction) — trigonometry generating consistent, correctly-proportioned
+geometry that would have been unreliable to eyeball by hand. Installed `cairosvg` (not a
+project dependency, a local tool for this one task) to rasterize the SVG straight to a PNG
+locally and actually look at it — twice: once at full strength to check the illustration
+itself reads as a football-in-a-splash and not noise, once composited over the app's real
+`--bg` colour at the intended low opacity to check it still reads once faded down to
+ambient-chrome faintness. Both checks passed before any of it touched the app.
+
+**Wiring.** Same slot in `body`'s background-image list the photo occupied, opacity baked
+into the SVG's own `<g opacity>` (0.13) rather than tuned live — consistent with every
+other ambient layer. First placement (top area, behind the "New match" card) turned out to
+hide most of the emblem behind that card on the empty-state screen; repositioned lower,
+into the empty space below the cards, where a screenshot confirmed the whole shape —
+ball, panels, shards, sparkles — reads clearly at rest. Removed everything the photo
+needed: the WebP file, its `vite.config.ts` precache entry (13 entries again, was 14),
+and the licence caveat in spec.md §11 (replaced with a note that the art is now original,
+precisely so there's no licence question left to carry).
+
+**Learn.** Two things worth keeping: (1) a licence question about "can we publish this"
+is often really a question about "do we have the right to use this at all" one layer
+down — worth asking the broader question once the narrower one surfaces something odd,
+rather than solving only the visibility half of it. (2) When a tool you'd reach for isn't
+available (no image generator here), the fallback isn't always "do a worse version of the
+same thing" — hand-built vector art *is* a first-class way to produce "anime style"
+specifically, not a compromise standing in for a photo-realistic generator; picking the
+representation a constraint actually points toward, rather than the one the request's
+wording most literally suggests, produced a better and simpler result than either
+photo-editing tricks or a lower-fidelity raster attempt would have.

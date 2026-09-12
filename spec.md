@@ -573,9 +573,8 @@ xG/
 ## 11. Non-functional requirements
 
 - **Offline:** every core flow (setup, logging, prediction, report, PSxG, export) works
-  with no network, once the service worker has cached the app (14 precache entries,
-  ~15.2 MB total incl. both models and the ambient background image — one-time download
-  the first time the site loads).
+  with no network, once the service worker has cached the app (13 precache entries,
+  ~15.2 MB total incl. both models — one-time download the first time the site loads).
 - **Performance:** shot xG computed in < 150 ms on a mid-range phone; pitch interaction 60 fps.
   PSxG is lazy — its extra ~755 KB model only downloads if the operator opens the
   placement tool, and its wasm runtime is already warm from the xG model by then.
@@ -583,10 +582,10 @@ xG/
   clear. No data leaves the device in v1.
 - **Privacy:** player names are user-entered local data; no third-party analytics in v1.
 - **Licence:** StatsBomb Open Data is non-commercial — v1 is non-commercial. Revisit before
-  any paid release. The ambient background image (`app/public/img/football-splash.webp`)
-  is a processed derivative of a third-party stock photo the operator supplied for this
-  personal build; ships only because the app itself is personal/non-commercial — re-check
-  its licence before any release with a wider audience.
+  any paid release. The ambient background art is all original, hand-built vector work (an
+  anime-style ball/splash emblem alongside the earlier grain/watermark/gradients, process.md
+  6.14) rather than a third-party photo — a copyrighted stock photo was tried first and
+  dropped specifically to avoid a licence question the app didn't need to carry.
 - **Accessibility:** large tap targets (≥ 44 px), works one-handed portrait.
   **Colour-blind-safe outcome palette — done:** shot outcomes are never color-alone —
   each has its own shape (★ goal, ● saved, ◆ post, ▲ blocked, ○ off target) *and* a
@@ -608,7 +607,7 @@ xG/
 | **M3 — Reporting** ✅ done | End-of-match report: FT score, xG verdict string (§9), player leaderboard + best-xG/efficiency picks, SVG shot map, cumulative xG timeline, chance-quality histogram; per-shot reason string + confidence band; JSON + CSV export. Pure logic in `src/xg/{verdict,report,reason,exportMatch}.ts`, all unit-tested (356 tests total). |
 | **M4 — Hardening** 🚧 | ✅ manual browser pass (2 runtime bugs found+fixed); ✅ full pitch shown (portrait, both halves); ✅ onnxruntime-web trimmed to the wasm entry (28→14 MB wasm, 414→73 KB glue) + lazy-loaded; ✅ Workbox service worker precaches shell + both models + wasm for full offline; ✅ full optional-detail inputs + pass-origin tool. **Remaining:** performance pass, real-match trial. |
 | **PSxG + full report** ✅ done | Moved up from "v2" — neither needed a server. §8.9: second model (on-target shots, goal-mouth placement, own ONNX + calibrators + parity fixtures), release gate PASS, optional goal-mouth tap in `ShotEntry`. §5.4: downloadable self-contained HTML match report (`reportHtml.ts`) with every shot's full data. 587 tests total. |
-| **Visual polish + match clock** ✅ done | Sports-broadcast redesign: validated categorical palette (team/value/outcome colours kept separate), hand-rolled icon set, shape+colour dual-encoded shot outcomes, ambient "chrome" (grain, pitch watermark, colour blooms, a muted photographic backdrop — process.md 6.13), a confetti burst on `goal`. §5.1/§5.3: operator-set half length + a broadcast-style clock (half tag, stoppage-time label, explicit "2nd half →"). 589 tests total. |
+| **Visual polish + match clock** ✅ done | Sports-broadcast redesign: validated categorical palette (team/value/outcome colours kept separate), hand-rolled icon set, shape+colour dual-encoded shot outcomes, ambient "chrome" (grain, pitch watermark, colour blooms, an original hand-built anime-style ball/splash emblem — process.md 6.13/6.14), a confetti burst on `goal`. §5.1/§5.3: operator-set half length + a broadcast-style clock (half tag, stoppage-time label, explicit "2nd half →"). 589 tests total. |
 | **v2 (needs a server, §2)** | Multi-device/operator sync, cloud accounts + cross-device history, automatic retraining pipeline from many operators' matches, SHAP attribution + calibrated intervals, game-state feature experiment. |
 
 ---

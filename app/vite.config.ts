@@ -12,7 +12,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       injectRegister: "auto",
       workbox: {
-        globPatterns: ["**/*.{js,css,html,onnx,json,wasm,woff2,svg,webp}"],
+        globPatterns: ["**/*.{js,css,html,onnx,json,wasm,woff2,svg}"],
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
         navigateFallback: "index.html",
         cleanupOutdatedCaches: true,
