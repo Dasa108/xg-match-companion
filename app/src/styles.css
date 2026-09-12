@@ -41,16 +41,10 @@
    All baked as `body` background-image (which always paints behind real content — no
    z-index/pseudo-element bookkeeping needed) and all opacity-capped inside the SVG/gradient
    itself so they stay legible-behind-text rather than needing tuning via blend modes:
-   a faint grain (premium-editorial texture, breaks up flat colour banding), a frieze of
-   three solid player silhouettes along the bottom edge (a strike, Roberto Carlos' free-kick
-   lean, an overhead/bicycle kick) — real body shadows, not stick-figure line art: each limb
-   is a thick round-capped stroke (a filled capsule) plus a filled head circle, all nested in
-   one shared SVG <g opacity=".06"> so overlapping capsules at a shoulder/hip composite as
-   one flat mass instead of double-darkening where they cross (per-shape fill/stroke-opacity
-   would have shown seams there — group opacity renders the whole figure to an offscreen
-   buffer first, then applies the fade once), a football line-art watermark bleeding off the
-   top-right corner, and soft stadium-glow colour blooms using the same home/away hues as
-   the rest of the app. */
+   a faint grain (premium-editorial texture, breaks up flat colour banding), a football
+   line-art watermark bleeding off the top-right corner, and soft stadium-glow colour blooms
+   using the same home/away hues as the rest of the app — the bottom bloom widened/brightened
+   a touch (process.md 6.12) to fill the space the (removed) player-silhouette layer left. */
 body {
   margin: 0;
   color: var(--ink);
@@ -60,15 +54,14 @@ body {
   background-color: var(--bg);
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='180' viewBox='0 0 900 180'%3E%3Cg fill='none' stroke='%23dff2ea' stroke-linecap='round' opacity='0.06'%3E%3Cg transform='translate(20,20)'%3E%3Ccircle cx='55' cy='16' r='9' fill='%23dff2ea' stroke='none'/%3E%3Cpath d='M55 28L50 66' stroke-width='20'/%3E%3Cpath d='M46 66L38 96' stroke-width='16'/%3E%3Cpath d='M38 96L34 128' stroke-width='13'/%3E%3Cpath d='M34 128L48 132' stroke-width='11'/%3E%3Cpath d='M54 64L78 70' stroke-width='16'/%3E%3Cpath d='M78 70L100 54' stroke-width='13'/%3E%3Cpath d='M100 54L114 44' stroke-width='11'/%3E%3Cpath d='M46 30L24 38' stroke-width='11'/%3E%3Cpath d='M24 38L8 26' stroke-width='9'/%3E%3Cpath d='M64 26L80 20' stroke-width='11'/%3E%3Cpath d='M80 20L96 10' stroke-width='9'/%3E%3C/g%3E%3Cg transform='translate(330,15)'%3E%3Ccircle cx='55' cy='20' r='9' fill='%23dff2ea' stroke='none'/%3E%3Cpath d='M55 32L73 64' stroke-width='20'/%3E%3Cpath d='M69 66L63 98' stroke-width='16'/%3E%3Cpath d='M63 98L61 130' stroke-width='13'/%3E%3Cpath d='M61 130L75 134' stroke-width='11'/%3E%3Cpath d='M77 62L101 70' stroke-width='16'/%3E%3Cpath d='M101 70L119 88' stroke-width='13'/%3E%3Cpath d='M119 88L133 78' stroke-width='11'/%3E%3Cpath d='M47 34L25 30' stroke-width='11'/%3E%3Cpath d='M25 30L7 20' stroke-width='9'/%3E%3Cpath d='M63 28L81 14' stroke-width='11'/%3E%3Cpath d='M81 14L99 4' stroke-width='9'/%3E%3C/g%3E%3Cg transform='translate(620,35)'%3E%3Ccircle cx='35' cy='70' r='9' fill='%23dff2ea' stroke='none'/%3E%3Cpath d='M39 64L75 50' stroke-width='20'/%3E%3Cpath d='M79 48L103 26' stroke-width='16'/%3E%3Cpath d='M103 26L123 4' stroke-width='13'/%3E%3Cpath d='M123 4L137 -6' stroke-width='11'/%3E%3Cpath d='M73 54L55 80' stroke-width='16'/%3E%3Cpath d='M55 80L45 108' stroke-width='13'/%3E%3Cpath d='M45 108L33 116' stroke-width='11'/%3E%3Cpath d='M35 58L19 74' stroke-width='11'/%3E%3Cpath d='M19 74L9 92' stroke-width='9'/%3E%3Cpath d='M45 60L61 52' stroke-width='11'/%3E%3Cpath d='M61 52L73 40' stroke-width='9'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640' viewBox='0 0 640 640'%3E%3Cg fill='none' stroke='%23dff2ea' stroke-width='2' stroke-opacity='0.05'%3E%3Ccircle cx='430' cy='110' r='150'/%3E%3Cpath d='M0 270H640'/%3E%3Cpath d='M640 30A230 230 0 0 1 640 400'/%3E%3C/g%3E%3Ccircle cx='430' cy='110' r='3' fill='%23dff2ea' fill-opacity='0.05'/%3E%3C/svg%3E"),
     radial-gradient(55% 38% at 10% -8%, rgba(31, 174, 102, 0.16), transparent 60%),
     radial-gradient(50% 34% at 105% -4%, rgba(44, 134, 209, 0.13), transparent 60%),
-    radial-gradient(70% 42% at 50% 115%, rgba(31, 174, 102, 0.08), transparent 65%);
-  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
-  background-position: 0 0, 50% 100%, 100% 0, 0 0, 0 0, 0 0;
-  background-size: 160px 160px, min(900px, 130vw) auto, min(640px, 90vw) min(640px, 90vw), auto, auto, auto;
-  background-attachment: fixed, fixed, fixed, fixed, fixed, fixed;
+    radial-gradient(100% 55% at 50% 112%, rgba(31, 174, 102, 0.11), transparent 68%);
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  background-position: 0 0, 100% 0, 0 0, 0 0, 0 0;
+  background-size: 160px 160px, min(640px, 90vw) min(640px, 90vw), auto, auto, auto;
+  background-attachment: fixed, fixed, fixed, fixed, fixed;
 }
 
 input,
@@ -425,3 +418,35 @@ fieldset.psxg { flex-direction: column; align-items: stretch; }
 .board tbody tr:nth-child(even) { background: rgba(255,255,255,0.025); }
 .board .pos { color: var(--pos); font-weight: 700; }
 .board .neg { color: var(--neg); font-weight: 700; }
+
+/* confetti — fired once per goal (Confetti.tsx), fixed overlay so it plays over whatever
+   screen/scroll position the operator is on; pointer-events:none so it never blocks the
+   next tap. Each piece is one <span>, fully described by inline custom props (--drift/
+   --rot) so the same two @keyframes cover every piece's individual fall path. */
+.confetti {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 80;
+}
+.confetti-piece {
+  position: absolute;
+  top: -14px;
+  width: 8px;
+  height: 14px;
+  border-radius: 1px;
+  opacity: 0.95;
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.15, 0.6, 0.4, 1);
+  animation-fill-mode: forwards;
+}
+.confetti-piece.round {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+@keyframes confetti-fall {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0.95; }
+  100% { transform: translate(var(--drift), 105vh) rotate(var(--rot)); opacity: 0; }
+}

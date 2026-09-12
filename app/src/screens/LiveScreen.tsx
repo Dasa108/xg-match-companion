@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { Confetti } from "../components/Confetti";
 import { Icon } from "../components/Icon";
 import { OutcomeGlyph } from "../components/OutcomeGlyph";
 import { ShotEntry } from "../components/ShotEntry";
@@ -15,6 +16,7 @@ export function LiveScreen({ match, onReport }: { match: Match; onReport: () => 
   const shots = useShots(match.id);
   const [, tick] = useState(0);
   const [showPlayers, setShowPlayers] = useState(false);
+  const [goalBurst, setGoalBurst] = useState(0);
 
   useEffect(() => warmModel(), []);
 
@@ -51,7 +53,17 @@ export function LiveScreen({ match, onReport }: { match: Match; onReport: () => 
         <Team a={away} right />
       </div>
 
-      <ShotEntry match={match} players={players} minute={minute} onSaved={() => tick((n) => n + 1)} />
+      {goalBurst > 0 && <Confetti key={goalBurst} />}
+
+      <ShotEntry
+        match={match}
+        players={players}
+        minute={minute}
+        onSaved={(outcome) => {
+          tick((n) => n + 1);
+          if (outcome === "goal") setGoalBurst((n) => n + 1);
+        }}
+      />
 
       <section>
         <h3 className="row spread">

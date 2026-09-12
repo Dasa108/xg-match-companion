@@ -1260,3 +1260,56 @@ happened to ride along with the pictogram approach. When a user names the actual
 target precisely ("shadow" implies filled mass, a specific and checkable property — not a
 vague "make it better"), that word choice is itself the spec; matching it beats
 re-deriving an aesthetic from an adjacent past lesson.
+
+### 6.12 Silhouettes removed outright; a goal now throws confetti
+
+**What.** User verdict on the 6.11 rebuild: still bad, just remove them — "extend the
+gradient" instead. Deleted the whole silhouette `url(...)` layer from `body`'s
+background-image list (and its matching entries in the repeat/position/size/attachment
+lists, which all have to stay index-aligned across five comma-separated properties). The
+bottom radial-gradient bloom was widened and brightened a little (`70% 42% → 100% 55%`,
+opacity `0.08 → 0.11`) to keep the base of the page from reading empty now that nothing
+sits along it. Net effect on the built CSS: 13.27 KB → 11.67 KB gzipped — one fewer large
+inline SVG, not a redesign of anything else on the page.
+
+**Learn.** Two rounds of trying to make an illustration idea work (pictogram, then solid
+capsule) is a signal worth noticing on its own: when a *specific decorative element* keeps
+missing rather than a *technique* being wrong, the fastest path to "looks good" can be
+subtracting the element and reinforcing what was already working (the gradient bloom),
+not iterating the same idea a third way. Simpler asks ("just extend the gradient") are
+often exactly that — simple — resist the urge to read a bigger redesign into them.
+
+**What (confetti).** Added a one-shot confetti burst fired when a shot is saved with
+outcome `goal`. New `components/Confetti.tsx`: ~46 absolutely-positioned `<span>` pieces,
+each fully described by inline custom properties (`--drift`, `--rot`) so one shared
+`@keyframes confetti-fall` covers every piece's individual fall path (random horizontal
+drift, rotation, delay, duration, colour drawn from the same `--home/--away/--pos/
+--accent-bright/--post` tokens already validated for the rest of the UI). `position:
+fixed` + `pointer-events: none` so it overlays the current scroll position without
+blocking the next tap.
+
+**Wiring.** `ShotEntry`'s `onSaved` callback now passes the outcome up (`onSaved(outcome)`
+instead of `onSaved()`); `LiveScreen` bumps a `goalBurst` counter when the outcome is
+`"goal"` and renders `{goalBurst > 0 && <Confetti key={goalBurst} />}` — the same
+"key-remount restarts the animation" pattern already used for the live-xG pop, so back-
+to-back goals each get a fresh burst (new random pieces, timer from zero) rather than the
+first one's timer silently governing a second goal that arrives before it finishes.
+
+**Self-cleanup, not a lingering overlay.** `Confetti` owns its own lifetime: a
+`useEffect`+`setTimeout` flips `alive` to false ~2.4s in (just past the slowest piece's
+fall duration) and the component returns `null`, unmounting the whole overlay `<div>` — so
+a shot screen left open after a goal doesn't accumulate dead, pointer-events-none DOM the
+operator can't see or account for.
+
+**Verified in browser** (fresh preview port, cleared the routine stale service worker):
+full-page screenshot confirmed the silhouettes are gone and the bottom bloom now visibly
+spans the width of the page. Drove the actual UI — create match, add one player per side,
+kick off, place a shot, pick the shooter, set outcome to goal, save — to log three real
+goals in a row; DOM checks after each confirmed a `.confetti` overlay mounted with exactly
+`PIECE_COUNT` `.confetti-piece` children, each carrying distinct randomized inline styles,
+and confirmed it was gone (`document.querySelector('.confetti') === null`) a few seconds
+later without needing a page reload. `Page.captureScreenshot` hit the session's recurring
+timeout mid-animation (expected — confetti is inherently a moving target for a screenshot,
+compounded by the extension's existing flakiness); per the standing "don't loop on a
+flaky tool" guidance, relied on the DOM-level checks instead of forcing a visual capture.
+587 tests unchanged, build clean.

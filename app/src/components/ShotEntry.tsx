@@ -49,7 +49,7 @@ interface Props {
   match: Match;
   players: Player[];
   minute: number;
-  onSaved: () => void;
+  onSaved: (outcome: Outcome) => void;
 }
 
 export function ShotEntry({ match, players, minute, onSaved }: Props) {
@@ -192,7 +192,7 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
         psxgBucket: psxgResult ? psxgResult.bucket : null,
       });
       reset();
-      onSaved();
+      onSaved(outcome);
     } finally {
       setSaving(false);
     }
