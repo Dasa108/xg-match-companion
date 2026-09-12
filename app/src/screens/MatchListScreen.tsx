@@ -94,7 +94,7 @@ export function MatchListScreen({ onOpen, offlineMode, onSetOfflineMode }: Props
       <section className="offline-setting">
         <p className="muted">
           {offlineMode
-            ? "Offline mode is on — the app caches itself so it keeps working with no signal, but may show an older version until you reload."
+            ? "Offline mode is on — the app caches itself so it keeps working with no signal, and updates itself automatically the next time you're online."
             : "Offline mode is off — always loads the latest version, but needs a connection every time."}
         </p>
         <button className="mini ghost" onClick={() => onSetOfflineMode(!offlineMode)}>

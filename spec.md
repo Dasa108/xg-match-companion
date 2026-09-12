@@ -588,12 +588,17 @@ xG/
 - **Offline:** every core flow (setup, logging, prediction, report, PSxG, export) works
   with no network, once the service worker has cached the app (13 precache entries,
   ~15.2 MB total incl. both models — one-time download the first time the site loads).
-- **Update handling:** a new deploy is never swapped in silently — `registerType: "prompt"`
-  leaves a new service-worker version waiting until the operator explicitly taps **"Reload"**
-  on an on-screen banner ("A new version is ready.") that appears only once one is actually
-  available. Solves a real gotcha found checking this app's own deploy: a page opened before
-  an update can otherwise keep serving stale cached code indefinitely with no sign anything
-  changed (process.md 6.19).
+- **Update handling:** fully automatic (`registerType: "autoUpdate"`) — the moment a new
+  service-worker version is detected, it activates and the page reloads with no prompt and
+  no click. A first pass built this as an explicit "Reload" banner instead, then reverted
+  to automatic on request; both attempts came from the same real gotcha found checking this
+  app's own deploy — a page opened before an update can otherwise keep serving stale cached
+  code indefinitely with no sign anything changed (process.md 6.19).
+- **Offline status flag:** since auto-update needs a connection to check for anything, being
+  offline is exactly when the running version might be stale with no way to know — the app
+  tracks `navigator.onLine` and shows a quiet, passive note ("Offline — may not be the
+  latest version.") whenever it's false. Not a prompt, nothing to act on — a fact about right
+  now, gone the moment connectivity returns (process.md 6.21).
 - **Offline mode toggle:** operator-controlled opt-out (default **on**, matching the
   offline-first requirement above) on the match list screen. Off unregisters the service
   worker and clears all caches — every load then always fetches the latest version over a

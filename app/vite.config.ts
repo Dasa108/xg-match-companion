@@ -6,12 +6,13 @@ import { VitePWA } from "vite-plugin-pwa";
 // site has been opened with a connection it works fully offline pitchside. No install
 // prompt / add-to-home-screen (spec §10); it just registers and caches.
 //
-// registerType "prompt" (not "autoUpdate") + injectRegister null: a new SW version is
-// fetched and put in the "waiting" state, but never silently activated — the app itself
-// (src/pwa/usePwa.ts, via the virtual:pwa-register module) decides when to ask the
-// operator and only calls skipWaiting on an explicit "reload" tap. "autoUpdate" would have
-// swapped code out from under a live session with no warning, which is exactly the
-// staleness this project ran into checking its own deploy (process.md 6.19).
+// registerType "autoUpdate": a new SW version activates and reloads the page automatically
+// the moment it's detected, no prompt. injectRegister stays `null` even so — registration
+// is still done by hand in src/pwa/usePwa.ts (via virtual:pwa-register), because that's the
+// only way a runtime preference (the offline-mode toggle) can decide whether to register at
+// all; the plugin's own auto-injected script can't consult localStorage. What auto-update
+// can't fix is being offline — no connection means no way to check for anything newer, so
+// usePwa also tracks that and the UI flags it passively (process.md 6.19/6.21).
 //
 // `base`: GitHub Pages serves a project site from a /<repo-name>/ subpath, not root, so
 // that build needs every asset URL prefixed with it — get this wrong and the page loads
@@ -28,7 +29,7 @@ export default defineConfig(() => ({
   plugins: [
     react(),
     VitePWA({
-      registerType: "prompt",
+      registerType: "autoUpdate",
       injectRegister: null,
       workbox: {
         globPatterns: ["**/*.{js,css,html,onnx,json,wasm,woff2,svg}"],

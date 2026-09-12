@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { Icon } from "./components/Icon";
-import { UpdateBanner } from "./components/UpdateBanner";
+import { OfflineFlag } from "./components/OfflineFlag";
 import { useMatch } from "./db/hooks";
 import { usePwa } from "./pwa/usePwa";
 import { MatchListScreen } from "./screens/MatchListScreen";
@@ -48,7 +48,7 @@ export function App() {
         )}
       </header>
 
-      {pwa.needRefresh && <UpdateBanner onReload={pwa.reload} />}
+      {pwa.isOffline && <OfflineFlag />}
 
       {(!openId || missing) && (
         <MatchListScreen onOpen={setOpenId} offlineMode={pwa.offlineMode} onSetOfflineMode={pwa.setOfflineMode} />

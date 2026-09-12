@@ -1,10 +1,19 @@
-// Owns the whole service-worker lifecycle in one place, so the header's offline-mode
-// toggle and the update banner share a single registration instead of each managing their
-// own (which would double-register the worker). Uses registerType:"prompt" (vite.config.ts)
-// — a new version is fetched and left waiting, never silently swapped in — so `needRefresh`
-// only flips once there's actually something to offer the operator, and `reload()` is the
-// only thing that activates it.
-import { useCallback, useEffect, useRef, useState } from "react";
+// Owns the whole service-worker lifecycle in one place, so the match-list offline-mode
+// toggle and this hook's own registration share a single instance instead of each managing
+// their own (which would double-register the worker).
+//
+// Updates are fully automatic, on purpose (reverted from an earlier manual "Reload" prompt
+// per operator request): the moment a new version is detected, it's activated and the page
+// reloads immediately, no click needed. injectRegister stays `null` (vite.config.ts) — the
+// registration is still done by hand here rather than the plugin's own auto-injected
+// script, because that's the only way a runtime preference (offlineMode) can decide whether
+// to register at all; a build-time-injected script can't consult localStorage.
+//
+// What auto-update *can't* do anything about is being offline: no connection means no way
+// to check for or fetch a newer version, so whatever's currently active is, by definition,
+// possibly stale. `isOffline` surfaces that as a passive fact for the UI to flag — not an
+// action to take, just something the operator should know while it's true.
+import { useCallback, useEffect, useState } from "react";
 import { registerSW } from "virtual:pwa-register";
 
 import { readOfflineMode, writeOfflineMode } from "./offlinePref";
@@ -22,21 +31,32 @@ async function unregisterAndClear(): Promise<void> {
 
 export interface PwaStatus {
   offlineMode: boolean;
-  needRefresh: boolean;
+  isOffline: boolean;
   setOfflineMode: (on: boolean) => void;
-  reload: () => void;
 }
 
 export function usePwa(): PwaStatus {
   const [offlineMode, setOfflineModeState] = useState(readOfflineMode);
-  const [needRefresh, setNeedRefresh] = useState(false);
-  const updateRef = useRef<((reloadPage?: boolean) => Promise<void>) | null>(null);
+  const [isOffline, setIsOffline] = useState(() => !navigator.onLine);
+
+  useEffect(() => {
+    const goOnline = () => setIsOffline(false);
+    const goOffline = () => setIsOffline(true);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (!offlineMode) return;
-    updateRef.current = registerSW({
+    const update = registerSW({
       immediate: true,
-      onNeedRefresh: () => setNeedRefresh(true),
+      onNeedRefresh: () => {
+        void update(true); // activate + reload immediately, no prompt
+      },
     });
   }, [offlineMode]);
 
@@ -54,9 +74,5 @@ export function usePwa(): PwaStatus {
     }
   }, []);
 
-  const reload = useCallback(() => {
-    void updateRef.current?.(true);
-  }, []);
-
-  return { offlineMode, needRefresh, setOfflineMode, reload };
+  return { offlineMode, isOffline, setOfflineMode };
 }

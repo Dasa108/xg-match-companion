@@ -1738,3 +1738,66 @@ artifact (the bundle hash) before trusting the next step of a test is the same "
 against the real artifact, not the intention" instinct as reading `dist/index.html`'s
 literal asset paths back in the GitHub Pages base-path work, not a new lesson so much as
 the same one landing in a new spot.
+
+### 6.21 Simplified back to auto-update, plus a passive offline flag
+
+**What.** Direct follow-up to 6.20: "let it be auto update only then. but it should be
+able to flag if it is running in offline mode and is not in the latest version." The
+explicit-reload banner from 6.20 was more mechanism than wanted — revert to fully
+automatic updates, but keep *some* visibility into "you might not be current," specifically
+tied to the one condition where that's actually knowable: being offline.
+
+**Why "offline" is the only honest signal available here.** With auto-update, being online
+means the app converges on the latest version within moments of any load — there's no
+window where "online but stale" persists long enough to be worth flagging. The one state
+where staleness can genuinely linger is offline: no connection means no way to check for or
+fetch anything newer, so whatever's active is *possibly* behind and there's no way to know
+by how much, or fix it, until connectivity returns. That reframes "flag if not on the
+latest version" from "track version numbers" (not meaningfully possible client-side without
+a server to compare against) into "flag exactly the condition that makes staleness
+possible" — simpler, and actually true.
+
+**Update mechanism**: `registerType` "prompt" → **"autoUpdate"** in `vite.config.ts`.
+`injectRegister` stays `null` — still hand-registering via `virtual:pwa-register` in
+`usePwa.ts`, because the offline-mode toggle (kept from 6.20, untouched) needs a runtime
+decision ("should this even register a service worker?") that a build-time auto-injected
+script can't make. The only change inside `onNeedRefresh`: instead of setting state for a
+banner, it now calls the update function immediately (`onNeedRefresh: () =>
+void update(true)`) — activate and reload the instant a new version is found, no prompt.
+Deleted `UpdateBanner.tsx` and the `needRefresh`/`reload` fields it needed from the hook's
+public shape.
+
+**Offline flag**: new `isOffline` state in `usePwa.ts`, tracked via the standard
+`window.addEventListener("online"/"offline", …)` pair against `navigator.onLine` (no new
+dependency — this is the same event pattern the platform already exposes for exactly this).
+New `<OfflineFlag>` component (replacing `UpdateBanner.tsx`) renders a quiet, non-actionable
+note — no button, no glow, visually toned down from the old banner's call-to-action styling
+on purpose, since this is ambient information, not a request for a tap. Shown regardless of
+the offline-mode toggle's setting: even with offline caching turned off, being disconnected
+still means auto-update couldn't have checked for anything, so the fact stays true either
+way.
+
+**Verified in browser, both halves.** Offline flag: dispatched synthetic `online`/`offline`
+window events (the same events the browser fires for real network changes) and confirmed
+the flag mounts and unmounts correctly each time — a `role="status"` element with no
+interactive contents, exactly the passive-fact treatment intended. Auto-update: repeated
+6.20's real-build-swap test (a comment-only edit doesn't survive minification into a
+different bundle, learned that one already) but this time reloaded the tab **without
+clicking anything** — the new bundle's own marker value was live and correct after that one
+reload alone, confirming the update genuinely applies itself with zero manual action now,
+not just that the detection machinery still fires.
+
+593 tests unchanged (590 pure-logic tests + `offlinePref.test.ts`'s 3 — nothing about
+`isOffline` or the auto-update timing is meaningfully unit-testable beyond what's already
+covered; both are thin wiring over browser/SW primitives, verified live same as the
+match-clock's ticking interval and other stateful hooks this session). Build clean, and the
+`workbox-window` bundle addition from 6.20 stays — still needed to detect updates at all,
+regardless of whether detecting one triggers a prompt or an immediate reload.
+
+**Learn.** The right level of user-facing signal for a background process isn't always
+"tell them when it happens" (6.20's banner) or "tell them nothing" (auto-update alone) —
+sometimes it's "tell them about the *precondition* that would make it matter," which can be
+a smaller, calmer, and more honest piece of UI than either alternative. The operator asking
+for exactly this after seeing the banner version suggests the banner was solving a slightly
+different problem (visibility into *the update process*) than the one that actually
+mattered (visibility into *whether right now is a moment staleness is possible*).
