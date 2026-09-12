@@ -53,7 +53,7 @@ describe("export", () => {
   const match: Match = {
     id: "m", date: "2026-09-10", label: "friendly", venue: "",
     homeName: "Rovers", awayName: "City", status: "finished", createdAt: 0,
-    clockStartedAt: null, clockAccumMs: 0,
+    clockStartedAt: null, clockAccumMs: 0, halfLengthMin: 45, currentHalf: 1,
   };
   const players = [
     { id: "p1", matchId: "m", side: "home" as const, name: "Ada", number: 9, role: "start" as const, onPitch: true },

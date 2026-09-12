@@ -39,12 +39,14 @@
 
 /* Ambient chrome: a flat black page reads like an unfinished tool, not a crafted one.
    All baked as `body` background-image (which always paints behind real content — no
-   z-index/pseudo-element bookkeeping needed) and all opacity-capped inside the SVG/gradient
-   itself so they stay legible-behind-text rather than needing tuning via blend modes:
-   a faint grain (premium-editorial texture, breaks up flat colour banding), a football
-   line-art watermark bleeding off the top-right corner, and soft stadium-glow colour blooms
-   using the same home/away hues as the rest of the app — the bottom bloom widened/brightened
-   a touch (process.md 6.12) to fill the space the (removed) player-silhouette layer left. */
+   z-index/pseudo-element bookkeeping needed) and all opacity-capped inside the asset itself
+   so they stay legible-behind-text rather than needing tuning via blend modes: a faint grain
+   (premium-editorial texture, breaks up flat colour banding), a moody photographic backdrop
+   (a ball breaking through water, process.md 6.13 — pre-darkened/desaturated and edge-
+   feathered to transparent directly in the WebP's own alpha channel, so it dissolves into
+   --bg rather than sitting on top of it as a bright rectangle), a football line-art
+   watermark bleeding off the top-right corner, and soft stadium-glow colour blooms using
+   the same home/away hues as the rest of the app. */
 body {
   margin: 0;
   color: var(--ink);
@@ -54,14 +56,15 @@ body {
   background-color: var(--bg);
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    url("/img/football-splash.webp"),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640' viewBox='0 0 640 640'%3E%3Cg fill='none' stroke='%23dff2ea' stroke-width='2' stroke-opacity='0.05'%3E%3Ccircle cx='430' cy='110' r='150'/%3E%3Cpath d='M0 270H640'/%3E%3Cpath d='M640 30A230 230 0 0 1 640 400'/%3E%3C/g%3E%3Ccircle cx='430' cy='110' r='3' fill='%23dff2ea' fill-opacity='0.05'/%3E%3C/svg%3E"),
     radial-gradient(55% 38% at 10% -8%, rgba(31, 174, 102, 0.16), transparent 60%),
     radial-gradient(50% 34% at 105% -4%, rgba(44, 134, 209, 0.13), transparent 60%),
     radial-gradient(100% 55% at 50% 112%, rgba(31, 174, 102, 0.11), transparent 68%);
-  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
-  background-position: 0 0, 100% 0, 0 0, 0 0, 0 0;
-  background-size: 160px 160px, min(640px, 90vw) min(640px, 90vw), auto, auto, auto;
-  background-attachment: fixed, fixed, fixed, fixed, fixed;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  background-position: 0 0, 50% -4%, 100% 0, 0 0, 0 0, 0 0;
+  background-size: 160px 160px, min(760px, 92vw) auto, min(640px, 90vw) min(640px, 90vw), auto, auto, auto;
+  background-attachment: fixed, fixed, fixed, fixed, fixed, fixed;
 }
 
 input,
@@ -131,6 +134,9 @@ h3 { font-size: 14px; margin: 18px 0 8px; font-weight: 700; }
 .row.gap { gap: 8px; }
 .row.spread { justify-content: space-between; }
 .row.wrap { flex-wrap: wrap; }
+.halflen { margin-top: 8px; }
+.halflen input { width: 60px; flex: none; text-align: center; }
+.halflen .muted { font-size: 13px; }
 .screen { display: flex; flex-direction: column; gap: 6px; }
 .num, .tnum { font-variant-numeric: tabular-nums; }
 
@@ -386,6 +392,15 @@ fieldset.psxg { flex-direction: column; align-items: stretch; }
 .sbteam .sbxg { color: var(--muted); font-size: 11px; }
 .sbteam.right { text-align: right; }
 .clock { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.half-tag {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+/* Stoppage time: no new colour role (team/value/outcome colours are deliberately kept
+   separate, see process.md 6.3) — just brighter + bolder than the resting muted tag. */
+.half-tag.overrun { color: var(--ink); font-weight: 700; }
 .clock .mini { min-width: 64px; }
 
 /* shot log */

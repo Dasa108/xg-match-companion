@@ -6,7 +6,8 @@ import { OutcomeGlyph } from "../components/OutcomeGlyph";
 import { ShotEntry } from "../components/ShotEntry";
 import { usePlayers, useShots } from "../db/hooks";
 import {
-  deleteShot, elapsedMinute, finishMatch, type Match, setClockMinute, toggleClock,
+  clockDisplay, deleteShot, elapsedMinute, finishMatch, type Match, setClockMinute,
+  startSecondHalf, toggleClock,
 } from "../db/schema";
 import { warmModel } from "../xg/model";
 import { playerLeaderboard, teamAggs } from "../xg/verdict";
@@ -28,6 +29,7 @@ export function LiveScreen({ match, onReport }: { match: Match; onReport: () => 
   }, [match.clockStartedAt]);
 
   const minute = elapsedMinute(match);
+  const clock = clockDisplay(match);
   const { home, away } = teamAggs(match, shots);
   const nameOf = (id: string | null) => players.find((p) => p.id === id)?.name ?? "—";
 
@@ -38,8 +40,11 @@ export function LiveScreen({ match, onReport }: { match: Match; onReport: () => 
         <div className="clock">
           <button className="mini" onClick={() => toggleClock(match)}>
             <Icon name={match.clockStartedAt ? "pause" : "play"} size={13} />
-            <span className="tnum">{minute}′</span>
+            <span className="tnum">{clock.label}</span>
           </button>
+          <span className={`half-tag ${clock.overrun ? "overrun" : ""}`}>
+            {clock.half === 1 ? "1st half" : "2nd half"}
+          </span>
           <button
             className="mini ghost"
             onClick={() => {
@@ -49,6 +54,11 @@ export function LiveScreen({ match, onReport }: { match: Match; onReport: () => 
           >
             edit
           </button>
+          {clock.half === 1 && (
+            <button className="mini ghost" onClick={() => startSecondHalf(match.id)}>
+              2nd half →
+            </button>
+          )}
         </div>
         <Team a={away} right />
       </div>

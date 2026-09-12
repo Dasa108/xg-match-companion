@@ -9,6 +9,7 @@ export function MatchListScreen({ onOpen }: { onOpen: (id: string) => void }) {
   const [label, setLabel] = useState("");
   const [home, setHome] = useState("");
   const [away, setAway] = useState("");
+  const [halfLength, setHalfLength] = useState("45");
 
   async function create() {
     if (!home.trim() || !away.trim()) return;
@@ -18,10 +19,12 @@ export function MatchListScreen({ onOpen }: { onOpen: (id: string) => void }) {
       venue: "",
       homeName: home.trim(),
       awayName: away.trim(),
+      halfLengthMin: Number(halfLength) || 45,
     });
     setLabel("");
     setHome("");
     setAway("");
+    setHalfLength("45");
     onOpen(id);
   }
 
@@ -34,6 +37,18 @@ export function MatchListScreen({ onOpen }: { onOpen: (id: string) => void }) {
           <input placeholder="home team" value={home} onChange={(e) => setHome(e.target.value)} />
           <input placeholder="away team" value={away} onChange={(e) => setAway(e.target.value)} />
         </div>
+        <label className="row gap halflen">
+          <span className="muted">half length</span>
+          <input
+            type="number"
+            min={1}
+            max={60}
+            inputMode="numeric"
+            value={halfLength}
+            onChange={(e) => setHalfLength(e.target.value)}
+          />
+          <span className="muted">min</span>
+        </label>
         <button className="primary" onClick={create} disabled={!home.trim() || !away.trim()}>
           Create
         </button>

@@ -23,6 +23,12 @@ export interface Match {
   // simple match clock: elapsed = accumMs + (startedAt ? now - startedAt : 0)
   clockStartedAt: number | null;
   clockAccumMs: number;
+  // Half length as set by the operator at match creation (spec §7.1) — drives the half/
+  // stoppage-time label in clockDisplay(). The clock itself stays one continuous
+  // accumulator; halftime is just the operator pausing it as usual, same as any other
+  // stoppage, and startSecondHalf() only flips which half a shot's minute is read against.
+  halfLengthMin: number;
+  currentHalf: 1 | 2;
 }
 
 export interface Player {
@@ -80,15 +86,19 @@ export async function createMatch(fields: {
   venue: string;
   homeName: string;
   awayName: string;
+  halfLengthMin?: number;
 }): Promise<string> {
   const id = uid();
+  const { halfLengthMin, ...rest } = fields;
   await db.matches.add({
     id,
-    ...fields,
+    ...rest,
     status: "setup",
     createdAt: Date.now(),
     clockStartedAt: null,
     clockAccumMs: 0,
+    halfLengthMin: halfLengthMin && halfLengthMin > 0 ? halfLengthMin : 45,
+    currentHalf: 1,
   });
   return id;
 }
@@ -136,6 +146,34 @@ export async function toggleClock(m: Match): Promise<void> {
 }
 export async function setClockMinute(id: string, minute: number): Promise<void> {
   await db.matches.update(id, { clockStartedAt: null, clockAccumMs: Math.max(0, minute) * 60000 });
+}
+
+// Flip to the second half. The clock is not reset or restarted from a fresh zero — it's
+// the same continuous accumulator, exactly like every other clock pause/resume in this
+// app (e.g. a water break) — this just resumes it if it was left paused for the halftime
+// break, and relabels subsequent minutes as "2nd half" via clockDisplay() below.
+export async function startSecondHalf(id: string): Promise<void> {
+  const m = await db.matches.get(id);
+  const patch: Partial<Match> = { currentHalf: 2 };
+  if (m && !m.clockStartedAt) patch.clockStartedAt = Date.now();
+  await db.matches.update(id, patch);
+}
+
+export interface ClockDisplay {
+  half: 1 | 2;
+  label: string; // "34'" in regulation, "45+3'" once a half runs past its target length
+  overrun: boolean;
+}
+// Pure — derives the broadcast-style clock label from the raw elapsed minute, the
+// operator's configured half length, and which half is currently marked. No new time
+// state: "overrun" (into stoppage time) is just minute > that half's target.
+export function clockDisplay(m: Match | undefined): ClockDisplay {
+  if (!m) return { half: 1, label: "0'", overrun: false };
+  const minute = elapsedMinute(m);
+  const half = m.currentHalf;
+  const target = half === 1 ? m.halfLengthMin : m.halfLengthMin * 2;
+  const overrun = minute > target;
+  return { half, overrun, label: overrun ? `${target}+${minute - target}'` : `${minute}'` };
 }
 
 // --- team sheets ---------------------------------------------------

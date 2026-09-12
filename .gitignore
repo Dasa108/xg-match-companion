@@ -13,3 +13,7 @@ training/artifacts/
 # OS / editor
 .DS_Store
 *.swp
+
+# Raw source art (third-party stock photo) — only the processed, muted derivative in
+# app/public/img/ is checked in and shipped; this is just the working source.
+/image.png

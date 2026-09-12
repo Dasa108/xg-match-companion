@@ -90,7 +90,10 @@ retraining from many operators' matches) — see §8.8. PSxG didn't, so it moved
 ## 5. Product requirements
 
 ### 5.1 Pre-match setup
-- Create match: date, competition/label, venue (free text), home team name, away team name.
+- Create match: date, competition/label, venue (free text), home team name, away team name,
+  **half length in minutes** (default 45, operator-editable per match — a youth/5-a-side
+  game rarely runs full 45s). Drives the running clock's half/stoppage-time display (§5.3);
+  it does not gate or reset the clock itself.
 - Enter both team sheets: player name + shirt number + starting/sub flag. Editable mid-match
   (subs). Minimum 1 player per team to start; full XI recommended.
 - Optional pitch-size calibration (local pitches vary): operator can set actual length/width;
@@ -141,6 +144,13 @@ Every field except shot location, shooter, and outcome has a default and may be 
 ### 5.3 Live tallies
 - Header shows running **team xG** (home vs away) and shot counts.
 - Per-player running xG accessible in one tap.
+- **Match clock**, broadcast-style: start/pause, manual minute override, and a half tag
+  ("1st half" / "2nd half"). Once elapsed minutes pass the current half's target (half
+  length, or double it in the 2nd half) the label switches to stoppage-time notation
+  (`45+3′`), same convention as a TV broadcast. An explicit **"2nd half →"** action (only
+  shown during the 1st half) flips the tag and resumes the clock if it was paused for
+  the break — the clock is always one continuous accumulator; halftime is just a pause
+  like any other, so no time is lost or double-counted crossing into the 2nd half.
 
 ### 5.4 End-of-match report
 - **Team xG:** totals, difference, and a verdict string (see §9).
@@ -209,7 +219,7 @@ saves whether or not the operator ever opens the placement tool.
 
 ```
 Match      { id, date, label, venue, home_team_id, away_team_id, pitch_len_m, pitch_wid_m,
-             created_at, status(setup|live|finished) }
+             half_length_min, current_half(1|2), created_at, status(setup|live|finished) }
 Team       { id, match_id, name, side(home|away) }
 Player     { id, team_id, name, number, role(start|sub), on_pitch(bool) }
 Shot       { id, match_id, team_id, player_id, minute, inputs(JSON per §6),
@@ -227,8 +237,13 @@ Shot       { id, match_id, team_id, player_id, minute, inputs(JSON per §6),
   (`homeName`/`awayName`) since there are always exactly two, identified by a `side` enum
   on `Player` and `Shot`. `Shot` also stores `bucket` and `raw` (uncalibrated model
   output), and `psxgRaw` alongside `psxg`. The match clock is `{clockStartedAt,
-  clockAccumMs}` — elapsed is recomputed, never ticked in storage. Delete cascades
-  match → players → shots in one transaction.
+  clockAccumMs}` — elapsed is recomputed, never ticked in storage. `halfLengthMin`
+  (operator-set at creation, default 45) and `currentHalf` (1|2, flipped by an explicit
+  `startSecondHalf()` action) drive `clockDisplay()`, a pure function deriving the
+  broadcast-style label/stoppage-time flag from elapsed minutes — no separate timer state,
+  both fields added with no Dexie migration (schemaless beyond the declared indexes, same
+  as the PSxG fields before them). Delete cascades match → players → shots in one
+  transaction.
 
 ---
 
@@ -558,8 +573,9 @@ xG/
 ## 11. Non-functional requirements
 
 - **Offline:** every core flow (setup, logging, prediction, report, PSxG, export) works
-  with no network, once the service worker has cached the app (13 precache entries,
-  ~15.2 MB total incl. both models — one-time download the first time the site loads).
+  with no network, once the service worker has cached the app (14 precache entries,
+  ~15.2 MB total incl. both models and the ambient background image — one-time download
+  the first time the site loads).
 - **Performance:** shot xG computed in < 150 ms on a mid-range phone; pitch interaction 60 fps.
   PSxG is lazy — its extra ~755 KB model only downloads if the operator opens the
   placement tool, and its wasm runtime is already warm from the xG model by then.
@@ -567,7 +583,10 @@ xG/
   clear. No data leaves the device in v1.
 - **Privacy:** player names are user-entered local data; no third-party analytics in v1.
 - **Licence:** StatsBomb Open Data is non-commercial — v1 is non-commercial. Revisit before
-  any paid release.
+  any paid release. The ambient background image (`app/public/img/football-splash.webp`)
+  is a processed derivative of a third-party stock photo the operator supplied for this
+  personal build; ships only because the app itself is personal/non-commercial — re-check
+  its licence before any release with a wider audience.
 - **Accessibility:** large tap targets (≥ 44 px), works one-handed portrait.
   **Colour-blind-safe outcome palette — done:** shot outcomes are never color-alone —
   each has its own shape (★ goal, ● saved, ◆ post, ▲ blocked, ○ off target) *and* a
@@ -589,6 +608,7 @@ xG/
 | **M3 — Reporting** ✅ done | End-of-match report: FT score, xG verdict string (§9), player leaderboard + best-xG/efficiency picks, SVG shot map, cumulative xG timeline, chance-quality histogram; per-shot reason string + confidence band; JSON + CSV export. Pure logic in `src/xg/{verdict,report,reason,exportMatch}.ts`, all unit-tested (356 tests total). |
 | **M4 — Hardening** 🚧 | ✅ manual browser pass (2 runtime bugs found+fixed); ✅ full pitch shown (portrait, both halves); ✅ onnxruntime-web trimmed to the wasm entry (28→14 MB wasm, 414→73 KB glue) + lazy-loaded; ✅ Workbox service worker precaches shell + both models + wasm for full offline; ✅ full optional-detail inputs + pass-origin tool. **Remaining:** performance pass, real-match trial. |
 | **PSxG + full report** ✅ done | Moved up from "v2" — neither needed a server. §8.9: second model (on-target shots, goal-mouth placement, own ONNX + calibrators + parity fixtures), release gate PASS, optional goal-mouth tap in `ShotEntry`. §5.4: downloadable self-contained HTML match report (`reportHtml.ts`) with every shot's full data. 587 tests total. |
+| **Visual polish + match clock** ✅ done | Sports-broadcast redesign: validated categorical palette (team/value/outcome colours kept separate), hand-rolled icon set, shape+colour dual-encoded shot outcomes, ambient "chrome" (grain, pitch watermark, colour blooms, a muted photographic backdrop — process.md 6.13), a confetti burst on `goal`. §5.1/§5.3: operator-set half length + a broadcast-style clock (half tag, stoppage-time label, explicit "2nd half →"). 589 tests total. |
 | **v2 (needs a server, §2)** | Multi-device/operator sync, cloud accounts + cross-device history, automatic retraining pipeline from many operators' matches, SHAP attribution + calibrated intervals, game-state feature experiment. |
 
 ---
@@ -612,6 +632,10 @@ xG/
   — still open, untested with a real operator.
 - Exact minute capture: manual entry vs a running match clock in the app — **resolved**:
   app clock with start/pause (§7 `clockStartedAt`/`clockAccumMs`), plus manual override.
+  Half length is operator-set per match (default 45 min, §5.1); the clock itself stays a
+  single continuous accumulator across both halves (halftime is just a pause), and
+  `clockDisplay()` derives the 1st/2nd-half tag and stoppage-time label from it — no
+  separate "half" timer to keep in sync.
 - Goal-mouth tap resolution for PSxG — **resolved**: a free continuous tap on the goal
   diagram (`GoalFrame.tsx`), not a discrete grid; clamped to a small margin around the
   frame so near-post/wide/over taps still register a placement.

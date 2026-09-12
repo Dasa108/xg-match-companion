@@ -6,7 +6,7 @@ import { efficiencyPick, playerLeaderboard, teamAggs, verdictLine } from "./verd
 const match: Match = {
   id: "m", date: "2026-09-10", label: "friendly", venue: "",
   homeName: "Rovers", awayName: "City", status: "finished",
-  createdAt: 0, clockStartedAt: null, clockAccumMs: 0,
+  createdAt: 0, clockStartedAt: null, clockAccumMs: 0, halfLengthMin: 45, currentHalf: 1,
 };
 
 function shot(side: "home" | "away", xg: number, outcome: Shot["outcome"], playerId: string | null = null): Shot {

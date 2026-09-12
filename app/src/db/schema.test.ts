@@ -7,8 +7,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { ShotInput } from "../xg/types";
 import { teamAggs } from "../xg/verdict";
 import {
-  addPlayer, createMatch, db, deleteMatch, elapsedMinute, finishMatch, reopenMatch,
-  saveShot, setClockMinute, startMatch,
+  addPlayer, clockDisplay, createMatch, db, deleteMatch, elapsedMinute, finishMatch,
+  reopenMatch, saveShot, setClockMinute, startMatch, startSecondHalf,
 } from "./schema";
 
 const shotInput: ShotInput = {
@@ -48,6 +48,52 @@ describe("match lifecycle", () => {
 
     await reopenMatch(id);
     expect((await db.matches.get(id))!.status).toBe("live");
+  });
+
+  it("defaults to a 45-minute half, and lets the operator set a custom length", async () => {
+    const id = await createMatch({
+      date: "2026-09-10", label: "x", venue: "", homeName: "R", awayName: "C",
+    });
+    expect((await db.matches.get(id))!.halfLengthMin).toBe(45);
+    expect((await db.matches.get(id))!.currentHalf).toBe(1);
+
+    const custom = await createMatch({
+      date: "2026-09-10", label: "x", venue: "", homeName: "R", awayName: "C",
+      halfLengthMin: 30,
+    });
+    expect((await db.matches.get(custom))!.halfLengthMin).toBe(30);
+  });
+
+  it("clockDisplay labels regulation time, stoppage time, and the current half", async () => {
+    const id = await createMatch({
+      date: "2026-09-10", label: "x", venue: "", homeName: "R", awayName: "C",
+      halfLengthMin: 20,
+    });
+    await startMatch(id);
+
+    await setClockMinute(id, 12);
+    let m = (await db.matches.get(id))!;
+    expect(clockDisplay(m)).toEqual({ half: 1, label: "12'", overrun: false });
+
+    // past the configured half length but still marked as the 1st half -> stoppage time
+    await setClockMinute(id, 23);
+    m = (await db.matches.get(id))!;
+    expect(clockDisplay(m)).toEqual({ half: 1, label: "20+3'", overrun: true });
+
+    // flips the half label and resumes a paused clock without losing accumulated time
+    await startSecondHalf(id);
+    m = (await db.matches.get(id))!;
+    expect(m.currentHalf).toBe(2);
+    expect(m.clockStartedAt).toBeTypeOf("number");
+    expect(elapsedMinute(m)).toBe(23); // unchanged — same continuous accumulator
+
+    await setClockMinute(id, 35);
+    m = (await db.matches.get(id))!;
+    expect(clockDisplay(m)).toEqual({ half: 2, label: "35'", overrun: false });
+
+    await setClockMinute(id, 45);
+    m = (await db.matches.get(id))!;
+    expect(clockDisplay(m)).toEqual({ half: 2, label: "40+5'", overrun: true });
   });
 
   it("saves shots and aggregates them by side", async () => {

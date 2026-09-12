@@ -6,7 +6,7 @@ import { buildReportHtml } from "./reportHtml";
 const match: Match = {
   id: "m", date: "2026-09-10", label: "friendly", venue: "Sunny Park",
   homeName: "Rovers", awayName: "City", status: "finished",
-  createdAt: 0, clockStartedAt: null, clockAccumMs: 0,
+  createdAt: 0, clockStartedAt: null, clockAccumMs: 0, halfLengthMin: 45, currentHalf: 1,
 };
 
 const players: Player[] = [

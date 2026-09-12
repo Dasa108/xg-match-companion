@@ -1313,3 +1313,106 @@ timeout mid-animation (expected — confetti is inherently a moving target for a
 compounded by the extension's existing flakiness); per the standing "don't loop on a
 flaky tool" guidance, relied on the DOM-level checks instead of forcing a visual capture.
 587 tests unchanged, build clean.
+
+### 6.13 A real photo, muted to fit the theme — plus a configurable match clock
+
+**What (background photo).** User supplied a reference photo (a football breaking through
+a water splash, glossy stock-photo style, light blue-grey background) and asked for
+"an image like this or a style like the image" in the background — after two rejected
+illustration attempts (6.10 pictograms, 6.11 solid capsules, 6.12 removed outright), this
+time a real photograph, not another redraw.
+
+**The problem it creates.** The source photo's own background is bright, flat light blue —
+the opposite of this app's near-black `--bg`. Used as-is at any real opacity it would sit
+on the page as a lit rectangle, breaking the "always recedes behind content" rule every
+other ambient layer follows.
+
+**Fix — bake the muting into the asset, same rule as every other ambient layer (6.9).**
+A one-off Python/Pillow script (not committed — a throwaway preprocessing step, the kind
+of thing that belongs in this log, not in the repo):
+1. Downscale to 760px wide (plenty for a background image at any realistic viewport, keeps
+   the shipped asset small).
+2. `ImageEnhance` desaturate (0.55×) and darken (0.5× brightness) so the photo's own tones
+   sit inside the app's dark palette instead of fighting it.
+3. Compute a radial falloff over the pixel grid (`numpy`) and multiply it into the alpha
+   channel, capped at a 0.4 peak — every edge fades to full transparency and even the
+   brightest point stays faint. This is the same "opacity baked into the asset itself"
+   principle as the grain/watermark SVGs, just done in a raster tool instead of hand-edited
+   SVG attributes, because the source material is a raster photo.
+4. Export WebP (quality 82) — 25 KB, negligible next to the 14 MB wasm already shipped.
+Composited a quick preview over the app's actual `--bg` colour locally before wiring it in
+at all, to check the muting actually reads as "moody ambient backdrop" and not "grey smear"
+— it did (soft, recognisable ball-and-splash shape, dissolving cleanly into black at every
+edge) — *before* touching any CSS or committing to the approach.
+
+**Wiring.** Placed in `app/public/img/` (Vite serves `public/` verbatim, so it's just
+`url("/img/football-splash.webp")` in the `body` background-image list — no JS import
+needed since nothing but CSS references it) and added `webp` to `vite.config.ts`'s
+`workbox.globPatterns` so the service worker actually precaches it — an easy miss, since
+the app already had one asset-type allowlist there and a new file extension silently
+doesn't get precached unless it's added to that list. The raw source photo itself was
+`.gitignore`'d (only the processed, muted derivative under `app/public/` is checked in);
+committing someone else's stock photo unprocessed isn't ours to distribute even in a
+personal repo, and it's not what actually ships anyway.
+
+**Licence note added to spec.md §11**, not just process.md — this is a fact about what the
+shipped app depends on (a third-party stock photo), not just a build-time story, so it
+belongs in the ground-truth doc too: fine for this personal, non-commercial build, flagged
+to re-check before anything wider.
+
+**What (match clock).** Added operator-set half length (§5.1 new field on the "New match"
+form, default 45 min) and a broadcast-style clock label. `Match` gains two fields:
+`halfLengthMin` (set once, at creation) and `currentHalf` (1|2, default 1). Deliberately
+did *not* build a second, separate "half timer" — the clock stays exactly the one
+continuous accumulator it already was (`clockStartedAt`/`clockAccumMs`, unchanged); a real
+halftime break is just the operator pausing it like any other stoppage, which this app
+already supported. The only new piece is a pure derived-label function:
+
+```ts
+clockDisplay(m) // { half, label, overrun }
+//   target = half===1 ? halfLengthMin : halfLengthMin*2
+//   overrun = minute > target
+//   label = overrun ? `${target}+${minute-target}'` : `${minute}'`
+```
+
+— i.e. exactly how a TV broadcast reads a clock (`45+3'` once a half runs long), computed
+from data that already existed rather than tracked as new time state. `startSecondHalf()`
+flips `currentHalf` to 2 and resumes the clock only if it was left paused (never touches
+`clockStartedAt` if already running, which would have silently dropped elapsed time — see
+the exact same class of bug avoided in `toggleClock`/`setClockMinute` already). An explicit
+**"2nd half →"** button (visible only while `currentHalf === 1`) is the one new operator
+action, matching the app's existing pattern of explicit lifecycle buttons ("Kick off →",
+"Full time →") rather than inferring the half from a minute threshold — inferring it would
+have broken during 1st-half stoppage time, where the elapsed minute legitimately exceeds
+`halfLengthMin` while still being the 1st half.
+
+**Tests.** Added to `schema.test.ts`: default half length (45) and a custom one persist;
+`clockDisplay` across regulation time, stoppage time in both halves, and confirms
+`startSecondHalf` resumes a paused clock without losing accumulated minutes. Also had to
+add `halfLengthMin`/`currentHalf` to three hand-built `Match` fixture literals
+(`report.test.ts`, `verdict.test.ts`, `reportHtml.test.ts`) once the interface gained
+required fields — TypeScript catches every one of these at `tsc --noEmit`, which is why
+that was run before trusting the build. 589 tests total (587 + 2 new), build clean.
+
+**Verified in browser**, both pieces, one session (fresh preview port, cleared the routine
+stale service worker): screenshot confirmed the muted photo backdrop and the new "half
+length" field on the same page. For the clock, waiting a real 45 minutes to see stoppage
+time wasn't practical, so the match's `clockAccumMs` was fast-forwarded via a direct
+IndexedDB write from the browser console (bypassing Dexie's own write path — deliberately,
+since the goal was to *observe* the derived display update against real component state,
+not to test Dexie itself, which the existing test suite already covers) — created a match
+with a 1-minute half, confirmed `1+2'` stoppage-time label, clicked **"2nd half →"**,
+confirmed the tag flipped to "2ND HALF" and the label recomputed against the doubled
+target (`2+1'`) with the button itself gone, exactly per `clockDisplay`'s contract.
+
+**Learn.** Two small, separate lessons worth keeping distinct: (1) when a decorative asset
+keeps missing as an *illustration*, the fix isn't always "draw it better" — sometimes the
+right move is a completely different asset *class* (a real photo instead of vector art),
+and the technique that makes a photo behave (bake the fade/darken into its own pixels, not
+into a CSS filter on the live element) is the same principle already established for SVG,
+just executed with different tools. (2) A "let the user configure X" request doesn't
+always mean "build a new subsystem for X" — here the entire clock mechanism already
+existed and was correct; the whole feature was one new persisted number, one derived pure
+function reading data that already existed, and one button reusing an existing action
+pattern. Recognizing "this fits the existing shape" avoided inventing a parallel half-timer
+that would have had to be kept in sync with the real one by hand.
