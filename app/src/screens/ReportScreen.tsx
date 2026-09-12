@@ -90,7 +90,11 @@ export function ReportScreen({ match, onLive }: { match: Match; onLive: () => vo
               </tr>
             ))}
             {board.length === 0 && (
-              <tr><td colSpan={hasPsxg ? 7 : 6} className="muted">No attributed shots.</td></tr>
+              <tr>
+                <td colSpan={hasPsxg ? 7 : 6} className="muted">
+                  <Icon name="football" size={13} className="td-icon" /> No attributed shots.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>

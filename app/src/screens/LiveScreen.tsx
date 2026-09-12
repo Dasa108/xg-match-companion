@@ -99,7 +99,13 @@ export function LiveScreen({ match, onReport }: { match: Match; onReport: () => 
                   <td>{p.goals}</td>
                 </tr>
               ))}
-              {shots.length === 0 && <tr><td colSpan={4} className="muted">No shots yet.</td></tr>}
+              {shots.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="muted">
+                    <Icon name="football" size={13} className="td-icon" /> No shots yet.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         )}

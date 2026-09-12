@@ -119,6 +119,15 @@ header {
   font-size: 12px;
 }
 
+/* One shared signature for every section heading across every screen — a colored left
+   bar, the same device already used for team identity in the scoreboard (.sbteam .sbname),
+   just in the neutral brand accent since a heading isn't home/away-specific. Ties screens
+   that got the "broadcast" treatment (scoreboard) to the plainer ones (setup, report
+   sections) that hadn't, instead of each screen inventing its own heading look. */
+h2, h3 {
+  border-left: 3px solid var(--accent);
+  padding-left: 8px;
+}
 h2 { font-size: 16px; margin: 0 0 8px; font-weight: 700; }
 h3 { font-size: 14px; margin: 18px 0 8px; font-weight: 700; }
 .eyebrow {
@@ -137,18 +146,39 @@ h3 { font-size: 14px; margin: 18px 0 8px; font-weight: 700; }
 .halflen { margin-top: 8px; }
 .halflen input { width: 60px; flex: none; text-align: center; }
 .halflen .muted { font-size: 13px; }
-.screen { display: flex; flex-direction: column; gap: 6px; }
+/* MatchList/Setup/Live/Report all share this one root class, and App.tsx swaps between
+   them by conditionally rendering one at a time (no router) — so a plain CSS mount
+   animation here fires automatically on every screen change with no JS wiring, same
+   "let the browser do it" approach as the live-xG pop / Confetti key-remount elsewhere. */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: screen-in 0.32s var(--ease);
+}
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen { animation: none; }
+}
 .num, .tnum { font-variant-numeric: tabular-nums; }
 
+/* Every card gets a hint of the scoreboard's depth (gradient + shadow) rather than sitting
+   as a flat utility panel — the scoreboard shouldn't be the only element that looks
+   designed. Kept subtle/neutral (no team-hued glow) since these are general-purpose
+   containers, not a team-identity moment. */
 .card {
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: linear-gradient(165deg, var(--panel-raised), var(--panel));
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-md);
   padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-bottom: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
 }
 
 button {
@@ -201,6 +231,7 @@ button.on {
 }
 .icon { flex: none; }
 .icon.rot180 { transform: rotate(180deg); }
+.td-icon { vertical-align: -2px; margin-right: 4px; opacity: 0.7; }
 
 /* pitch + entry */
 .pitch {
@@ -350,14 +381,20 @@ fieldset.psxg { flex-direction: column; align-items: stretch; }
 .sheets { display: grid; grid-template-columns: 1fr; gap: 10px; }
 @media (min-width: 520px) { .sheets { grid-template-columns: 1fr 1fr; } }
 .sheet {
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: linear-gradient(165deg, var(--panel-raised), var(--panel));
+  border: 1px solid var(--line-strong);
   border-top: 3px solid var(--line);
   border-radius: var(--radius-md);
   padding: 10px 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
 }
 .sheet.side-home { border-top-color: var(--home); }
 .sheet.side-away { border-top-color: var(--away); }
+/* --accent and --home are the same green, so the shared h2/h3 left-bar already matches
+   the home sheet's top border for free; only away needs to be told to match its own blue
+   instead of the generic accent, so one sheet's heading doesn't visually disagree with its
+   own card. */
+.sheet.side-away h3 { border-left-color: var(--away); }
 .sheet ul { list-style: none; margin: 6px 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
 .sheet li,
 .addrow { display: flex; gap: 5px; align-items: center; }
@@ -425,7 +462,19 @@ fieldset.psxg { flex-direction: column; align-items: stretch; }
 .ftscore { display: flex; gap: 14px; justify-content: center; align-items: baseline; font-size: 19px; }
 .ftscore b { font-size: 36px; font-weight: 900; letter-spacing: -0.02em; text-shadow: 0 0 24px rgba(46,232,127,0.25); }
 .ftxg { color: var(--muted); font-size: 13px; }
-.verdict { margin: 10px 0 0; font-size: 14px; }
+/* This sentence is the entire point of the app — the raw score above it got a glow, but
+   the actual verdict was still sitting at 14px/regular weight with no separation from the
+   score block. Give it real weight and a thin rule to mark it as its own tier, not a
+   caption underneath the number. */
+.verdict {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--ink);
+}
 .board { width: 100%; border-collapse: collapse; font-size: 13px; }
 .board thead th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }
 .board th, .board td { text-align: right; padding: 7px 5px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }

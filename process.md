@@ -1472,3 +1472,63 @@ specifically, not a compromise standing in for a photo-realistic generator; pick
 representation a constraint actually points toward, rather than the one the request's
 wording most literally suggests, produced a better and simpler result than either
 photo-editing tricks or a lower-fidelity raster attempt would have.
+
+### 6.15 Found a real bug reviewing visuals; then screen transitions + treatment consistency
+
+**What (the bug).** Asked "what would make the site look better," and before answering
+went to actually look — a fresh `npm run build && npm run preview` produced a completely
+blank page, no console error. Root cause: `vite preview` only serves whatever `vite build`
+already baked into `dist/` as static files; it never re-derives `base` for its own server.
+6.13's GitHub Pages fix had set `base` to the `/xg-match-companion/` subpath whenever
+`command === "build"` — which is *every* local `npm run build`, not just the one CI runs
+for Pages. So an entirely ordinary local build now asked for
+`/xg-match-companion/assets/*.js`, a path that doesn't exist under the preview server's
+root; its SPA fallback quietly served `index.html` in its place (200, `text/html`), the
+browser refused to execute it as a script, and React never mounted. No error surfaced
+anywhere — just a blank tab. Fixed by gating the subpath on an explicit `GH_PAGES` env var
+that only the CI workflow sets, instead of on which Vite command is running, so local
+build/dev/preview/test all agree on root `/` and only the Pages deploy gets the subpath.
+Verified both directions: local preview renders again, and the live GitHub Pages site
+still resolves its assets correctly after redeploying.
+
+**Learn.** This is the second time this project has drawn a straight line from "go check
+it in the browser" to "found a real bug headless tests structurally cannot catch" (the
+first was M4's onnxruntime-web freeze, 4.2). Both times the bug was invisible from the
+diff and from the test suite — the code was self-consistent, just wrong about which
+environment it was running in. Worth remembering as a standing reason to actually load the
+page, not just reason about the change.
+
+**What (the actual ask).** Reviewed the app fresh (setup screen, live screen, report
+screen) and named four concrete gaps rather than generic "make it prettier" suggestions:
+the report's verdict sentence — the entire point of the app — was smaller and plainer than
+the score above it; `.card`/`.sheet` were flat utility panels while `.scoreboard` alone got
+gradient/glow treatment; no transition between screens; and small inconsistencies (one
+empty state got an icon, another didn't). User approved transitions + consistency.
+
+**Screen transitions, no JS.** `MatchListScreen`, `SetupScreen`, `LiveScreen`, and
+`ReportScreen` all already render one shared root class (`.screen`), and `App.tsx` swaps
+between them by conditional rendering, not a router — so a plain `@keyframes` fade+rise on
+`.screen` fires on every screen change for free, the same "let a mount/remount trigger the
+animation" approach as the live-xG pop and Confetti. Added a `prefers-reduced-motion` guard
+since this one repeats on every navigation, unlike a one-off goal celebration.
+
+**Consistency pass:**
+- `.card` and `.sheet` (New match form, team-sheet panels) gained a subtle gradient +
+  shadow — the same depth `.scoreboard` already had, so the app doesn't read as one
+  designed hero moment surrounded by plain leftover panels. Deliberately neutral (no
+  team-hued glow) since these aren't identity moments.
+- `.verdict` gained real weight (17px/700, its own top rule separating it from the score)
+  — matching its actual importance instead of sitting under the score at 14px.
+- Every `h2`/`h3` now gets a colored left bar, generalizing the same device already used
+  for team identity in the scoreboard. One wrinkle: `--accent` and `--home` are the same
+  green, so this matched the home team-sheet's heading for free, but the away sheet's
+  heading needed an explicit override to blue — otherwise its own heading bar would have
+  visually disagreed with its own card's blue top border.
+- Two plain-text empty-table-rows ("No shots yet", "No attributed shots") gained the same
+  small football-icon treatment the "No matches yet" empty state already had.
+
+**Verified in browser**: created a match, checked the home/away sheet heading colors match
+their own cards (not a generic accent clash), logged a goal through to the report screen,
+and confirmed the verdict line now reads as its own emphasized tier below a rule rather
+than a caption under the score. 589 tests unchanged (pure CSS + two one-line icon adds),
+build clean.
