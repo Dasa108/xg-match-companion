@@ -1640,3 +1640,101 @@ click summons a real OS-level dialog my own tooling is instructed never to trigg
 way through is the same one used earlier for stoppage-time (6.13/6.15): drive the
 underlying state directly, and read the resulting UI/behavior, rather than performing the
 one user action that would need a modal to resolve.
+
+### 6.19 The live site itself can go stale — found checking the previous feature
+
+**What.** Asked to "check it on the browser" after 6.18 shipped. Opened the real deployed
+URL (not a local preview) for the first time this session and got a page showing none of
+that session's work — old JS bundle hash, no warning text, plain headings. Not a deploy
+failure: `curl`-ing the same URL and checking the Actions run both confirmed the correct
+build was live. The browser tab itself was the problem — a stale service worker.
+
+**Why this one was different from every other stale-SW instance this session.** Every
+previous case (6.9, 6.13, 6.15, etc.) was `localhost:<port>` during local dev, and the fix
+was always "use a fresh port" or "clear it once." The production URL doesn't have that
+escape hatch — it's the *same origin* every single time it's visited, this session or any
+other, so whatever it precached on the first visit keeps being served until something
+explicitly clears it. Revisiting the live site repeatedly across a session (checking each
+deploy) is exactly the pattern that accumulates this staleness, same as a real user
+returning to a bookmarked PWA after an update shipped.
+
+**Fix applied in the moment**: `unregister()` + `caches.delete()` + reload, same recipe as
+always, confirmed by a differing JS hash before/after. **Fix that actually matters**: told
+the user directly rather than quietly working around it and moving on — a real visitor
+returning to the live site after an update ships would hit the exact same thing, and this
+app had no mechanism to tell them a newer version existed at all (`registerType:
+"autoUpdate"` swaps code in behind the scenes with no visible signal either way). That
+observation is what prompted the operator's next request — 6.20.
+
+**Learn.** A gotcha's fix and its *scope* are two different things worth stating
+separately. "Clear the SW, it's fixed" is true and sufficient for continuing to verify
+that one feature; "this will keep happening to real visitors on every future deploy" is a
+different, larger claim that's easy to under-report if the immediate task (verify feature
+X) is what's foremost in mind. Both were true here, and only reporting the first would
+have buried a real, recurring product gap inside what looked like a one-off verification
+hiccup.
+
+### 6.20 A real "update available" prompt, and an opt-out of offline caching
+
+**What.** Direct follow-up to 6.19: "add an update available message so that they can
+reload the update... is there a way to give them an option whether they want to cache the
+website in the browser or let the site refresh every time."
+
+**Update prompt.** `registerType: "autoUpdate"` → `"prompt"` in `vite.config.ts`, and
+`injectRegister: "auto"` → `null` — the plugin no longer auto-injects a registration script
+or silently activates new versions; the app now owns that decision. New
+`src/pwa/usePwa.ts` calls `virtual:pwa-register`'s `registerSW()` directly (added
+`src/vite-env.d.ts` with `/// <reference types="vite-plugin-pwa/client" />` so TS resolves
+that virtual module), passing an `onNeedRefresh` callback that flips `needRefresh` to true
+— which is the *only* thing that makes `<UpdateBanner>` render ("A new version is ready." +
+a Reload button). Nothing shows unless a newer version is genuinely waiting; nothing swaps
+in until the operator taps Reload, which calls the function `registerSW()` returns
+(`updateSW(true)` in the library's own terms) to skip-waiting-and-reload in one step.
+
+**Offline-mode toggle.** New `src/pwa/offlinePref.ts` — pure `readOfflineMode`/
+`writeOfflineMode` over `localStorage`, default `true` (spec §11's offline-first
+requirement stays the default; this is an opt-*out*, not a new default). Surfaced as a
+small row at the bottom of `MatchListScreen` (a rarely-touched preference, not something
+that belongs competing for attention with "New match"). Toggling off calls
+`unregisterAndClear()` (same unregister-service-workers + delete-caches recipe this
+project has hand-run from devtools all session) then reloads; toggling on just re-registers
+and reloads. Both directions reload immediately on principle: a service worker's active/
+inactive state can only actually change from the *next* navigation, so leaving the UI
+saying "off" while the old worker is still technically controlling the page would be its
+own small lie.
+
+One hook, `usePwa()`, owns both features — a single `registerSW()` call shared by
+`MatchListScreen`'s toggle and by `App.tsx`'s banner, called once at the
+top of `App` and passed down, specifically so the two consumers can't accidentally
+double-register two independent service-worker lifecycles.
+
+**A bundle-size note in passing**: switching to manual registration pulls in
+`workbox-window` (`workbox-window.prod.es5-*.js`, 5.75 KB / 2.36 KB gzipped) — the small
+runtime library that actually listens for `waiting`/`controlling` state and is what makes
+`onNeedRefresh` possible at all. `injectRegister: "auto"`'s generated script didn't need it
+because it never watched for updates in a way the app could react to; this is the real
+cost of that capability, not the cost of the same thing done redundantly.
+
+**Verified for real, not just by reading the library's docs.** The offline toggle: turned
+it off, confirmed via JS that the registration count actually dropped to 0 and the cache
+key list emptied; turned it back on, confirmed a fresh registration appeared. The update
+banner needed an actual different build to detect — a comment-only edit round-tripped to
+an *identical* minified bundle (comments don't survive minification, so "make a trivial
+change" quietly wasn't one) — swapped it for a real runtime statement, rebuilt, reloaded
+the *same* open tab against the *same* preview server (deliberately not a fresh port —
+this needs to simulate a real user returning to a site that changed under them, which is
+exactly 6.19's scenario), and only then did the banner appear. Clicked Reload, confirmed
+via the new build's own marker value that the new bundle was actually active and the
+banner was gone. Added `src/pwa/offlinePref.test.ts` (3 tests, with a tiny in-memory
+`localStorage` stand-in since vitest's configured environment is plain Node with no
+browser storage global) — 593 tests total, was 590. Build clean.
+
+**Learn.** Verifying "does the update-prompt actually fire" needed the same discipline as
+6.18's confirm-dialog problem, just the opposite failure mode: there it was "don't perform
+the action that summons something you can't safely trigger," here it was "don't assume the
+setup step (a code change) actually did what it looks like it did." A comment edit reads
+as a change to a human and is genuinely a no-op to a minifier — checking the actual output
+artifact (the bundle hash) before trusting the next step of a test is the same "verify
+against the real artifact, not the intention" instinct as reading `dist/index.html`'s
+literal asset paths back in the GitHub Pages base-path work, not a new lesson so much as
+the same one landing in a new spot.

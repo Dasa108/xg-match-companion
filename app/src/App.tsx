@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 
 import { Icon } from "./components/Icon";
+import { UpdateBanner } from "./components/UpdateBanner";
 import { useMatch } from "./db/hooks";
+import { usePwa } from "./pwa/usePwa";
 import { MatchListScreen } from "./screens/MatchListScreen";
 import { SetupScreen } from "./screens/SetupScreen";
 import { LiveScreen } from "./screens/LiveScreen";
@@ -10,6 +12,7 @@ import { ReportScreen } from "./screens/ReportScreen";
 const LAST_KEY = "xg.lastMatch";
 
 export function App() {
+  const pwa = usePwa();
   const [openId, setOpenId] = useState<string | null>(() => {
     try {
       return localStorage.getItem(LAST_KEY);
@@ -45,7 +48,11 @@ export function App() {
         )}
       </header>
 
-      {(!openId || missing) && <MatchListScreen onOpen={setOpenId} />}
+      {pwa.needRefresh && <UpdateBanner onReload={pwa.reload} />}
+
+      {(!openId || missing) && (
+        <MatchListScreen onOpen={setOpenId} offlineMode={pwa.offlineMode} onSetOfflineMode={pwa.setOfflineMode} />
+      )}
       {match && match.status === "setup" && <SetupScreen match={match} onLive={() => {}} />}
       {match && match.status === "live" && <LiveScreen match={match} onReport={() => {}} />}
       {match && match.status === "finished" && (

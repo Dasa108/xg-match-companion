@@ -588,6 +588,18 @@ xG/
 - **Offline:** every core flow (setup, logging, prediction, report, PSxG, export) works
   with no network, once the service worker has cached the app (13 precache entries,
   ~15.2 MB total incl. both models — one-time download the first time the site loads).
+- **Update handling:** a new deploy is never swapped in silently — `registerType: "prompt"`
+  leaves a new service-worker version waiting until the operator explicitly taps **"Reload"**
+  on an on-screen banner ("A new version is ready.") that appears only once one is actually
+  available. Solves a real gotcha found checking this app's own deploy: a page opened before
+  an update can otherwise keep serving stale cached code indefinitely with no sign anything
+  changed (process.md 6.19).
+- **Offline mode toggle:** operator-controlled opt-out (default **on**, matching the
+  offline-first requirement above) on the match list screen. Off unregisters the service
+  worker and clears all caches — every load then always fetches the latest version over a
+  connection, trading away offline pitchside use for never seeing a stale one. Both
+  directions reload immediately, since a service worker can only change what's active from
+  the next navigation onward.
 - **Performance:** shot xG computed in < 150 ms on a mid-range phone; pitch interaction 60 fps.
   PSxG is lazy — its extra ~755 KB model only downloads if the operator opens the
   placement tool, and its wasm runtime is already warm from the xG model by then.

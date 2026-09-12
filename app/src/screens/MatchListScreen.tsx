@@ -4,7 +4,13 @@ import { Icon } from "../components/Icon";
 import { useMatches } from "../db/hooks";
 import { createMatch, deleteMatch } from "../db/schema";
 
-export function MatchListScreen({ onOpen }: { onOpen: (id: string) => void }) {
+interface Props {
+  onOpen: (id: string) => void;
+  offlineMode: boolean;
+  onSetOfflineMode: (on: boolean) => void;
+}
+
+export function MatchListScreen({ onOpen, offlineMode, onSetOfflineMode }: Props) {
   const matches = useMatches();
   const [label, setLabel] = useState("");
   const [home, setHome] = useState("");
@@ -83,6 +89,17 @@ export function MatchListScreen({ onOpen }: { onOpen: (id: string) => void }) {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="offline-setting">
+        <p className="muted">
+          {offlineMode
+            ? "Offline mode is on — the app caches itself so it keeps working with no signal, but may show an older version until you reload."
+            : "Offline mode is off — always loads the latest version, but needs a connection every time."}
+        </p>
+        <button className="mini ghost" onClick={() => onSetOfflineMode(!offlineMode)}>
+          {offlineMode ? "Turn off & reload" : "Turn on & reload"}
+        </button>
       </section>
     </div>
   );
