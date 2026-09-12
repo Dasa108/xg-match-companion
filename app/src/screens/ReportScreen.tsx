@@ -9,7 +9,13 @@ import {
   bestXgPlayer, efficiencyPick, playerLeaderboard, teamAggs, verdictLine,
 } from "../xg/verdict";
 
-export function ReportScreen({ match, onLive }: { match: Match; onLive: () => void }) {
+export function ReportScreen({
+  match, onLive, onHome,
+}: {
+  match: Match;
+  onLive: () => void;
+  onHome: () => void;
+}) {
   const players = usePlayers(match.id);
   const shots = useShots(match.id);
   const { home, away } = teamAggs(match, shots);
@@ -129,6 +135,9 @@ export function ReportScreen({ match, onLive }: { match: Match; onLive: () => vo
         </div>
       </section>
 
+      <button className="primary big" onClick={onHome}>
+        Back to matches
+      </button>
       <button className="ghost big" onClick={async () => { await reopenMatch(match.id); onLive(); }}>
         <Icon name="chevron" className="rot180" size={14} /> reopen match
       </button>

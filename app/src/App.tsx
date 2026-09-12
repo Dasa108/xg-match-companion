@@ -48,7 +48,9 @@ export function App() {
       {(!openId || missing) && <MatchListScreen onOpen={setOpenId} />}
       {match && match.status === "setup" && <SetupScreen match={match} onLive={() => {}} />}
       {match && match.status === "live" && <LiveScreen match={match} onReport={() => {}} />}
-      {match && match.status === "finished" && <ReportScreen match={match} onLive={() => {}} />}
+      {match && match.status === "finished" && (
+        <ReportScreen match={match} onLive={() => {}} onHome={() => setOpenId(null)} />
+      )}
     </div>
   );
 }

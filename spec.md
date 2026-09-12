@@ -178,6 +178,10 @@ Every field except shot location, shooter, and outcome has a default and may be 
   - `<...>_shots.csv` — one row per shot: match, date, minute, side, team, number, player,
     x, y, shot_type, body_part, under_pressure, bucket, xg, raw, outcome, is_goal, psxg,
     psxg_raw, psxg_bucket, goalmouth_y, goalmouth_z.
+- **Leaving the report**: two explicit actions, not just the header logo. **"Back to
+  matches"** (primary) returns to the match list — the match stays `finished` and stays in
+  the list, reopenable later. **"reopen match"** (secondary) is the corrective path: flips
+  the match back to `live` so shots can still be added/edited before re-finishing.
 
 ---
 

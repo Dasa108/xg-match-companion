@@ -1558,3 +1558,40 @@ unchanged — this is UI-only interactive wiring with no pure-function surface t
 were verified live rather than given a component-render test, since the project has no
 React-render test setup and adding one for a single button would be disproportionate).
 Build clean.
+
+### 6.17 No way home from the report screen
+
+**What.** "I don't see an option to end the match at all. After the report is given
+shouldn't there be an option to go back to the home page." Checked `App.tsx`'s routing to
+find out why — it turned up something worth understanding before fixing anything: the
+`onLive`/`onReport` callback props every screen receives are **no-ops** (`() => {}`)
+everywhere they're passed. Screen switching doesn't actually run through them; `App.tsx`
+picks which screen to render purely from `match.status`, a live Dexie query value, so once
+`startMatch`/`finishMatch`/`reopenMatch` mutate the DB, the query re-fires and the parent
+re-renders on a different branch automatically. Those callbacks are dead weight left over
+from an earlier, more explicit routing design — calling them today does nothing.
+
+That's fine for status transitions (the DB already drives them), but it means there was
+**no client-side "go back to the match list" affordance at all** except the header logo —
+a small branding button in the corner, not something that reads as an intentional "I'm
+done" action, especially on a phone. `ReportScreen` had "reopen match" (a real, working
+corrective action — flips status back to `live`) but nothing for the common case of
+"I'm finished looking at this, take me back."
+
+**Fix.** `ReportScreen` gained a real `onHome` prop — unlike `onLive`/`onReport`, this one
+isn't vestigial: going "home" is pure client-side navigation state (`openId` in `App.tsx`),
+not something the database can drive by itself, so a callback is the only way to do it.
+Wired in `App.tsx` as `onHome={() => setOpenId(null)}` — the same reset the header logo
+already performed, just given its own clearly-labeled, prominent (`primary big`) button:
+**"Back to matches"**, placed above the now-secondary "reopen match" ghost button, since
+finishing up and moving on is the common path and reopening is the correction.
+
+**Verified in browser**: played a match through to the report screen, clicked "Back to
+matches," confirmed it lands on the match list with the match still showing, correctly
+tagged **FINISHED** and still openable later — nothing about the match itself was touched,
+only which screen is currently shown. 589 tests unchanged, build clean.
+
+**Learn.** "Where's the button to do X" is sometimes actually "there's dead code standing
+in for what should be doing X" — worth tracing the existing wiring (why does this screen
+switch at all, right now?) before assuming a button is simply missing, since the fix here
+was informed by finding an unused prop, not just adding a new one blind.
