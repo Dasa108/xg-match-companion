@@ -7,6 +7,9 @@ server. Built as a personal, non-commercial project.
 At full time it tells you which **team** created the better chances and which **player**
 had the better xG — volume and efficiency — regardless of who actually scored.
 
+**🔗 Live site: [dasa108.github.io/xg-match-companion](https://dasa108.github.io/xg-match-companion/)**
+— open it once with a connection and it keeps working offline from then on (§ Tech stack).
+
 > 📄 The full functional spec lives in [`spec.md`](spec.md) — that's the ground-truth
 > source of truth for every decision. The build log / learning journal is
 > [`process.md`](process.md) — a step-by-step "what / why / how" of how this was built,
@@ -113,6 +116,15 @@ those directories directly at runtime, so it stays a normal static site once bui
 Retraining the model itself is a separate Python pipeline under `training/` (pull data →
 build features → train → evaluate → export to ONNX) — see `training/` and `spec.md` §8 for
 the full methodology if you want to reproduce or extend it.
+
+### Deployment
+
+The live site is a plain static build, deployed to GitHub Pages. `.github/workflows/
+deploy-pages.yml` builds `app/` and publishes `app/dist` on every push to `m1-model` that
+touches the app (or a manual run from the Actions tab) — no separate hosting account
+needed. Because a GitHub Pages project site is served from a `/xg-match-companion/`
+subpath rather than root, `vite.config.ts` sets `base` to that subpath for production
+builds only; local `dev`/`preview` stay at `/`.
 
 ---
 
