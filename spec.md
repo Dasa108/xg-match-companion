@@ -153,6 +153,13 @@ Every field except shot location, shooter, and outcome has a default and may be 
   shown during the 1st half) flips the tag and resumes the clock if it was paused for
   the break — the clock is always one continuous accumulator; halftime is just a pause
   like any other, so no time is lost or double-counted crossing into the 2nd half.
+- **Ending early is allowed but confirmed, not silent.** "Full time →" always works —
+  abandoning a match, or just closing out ahead of the scheduled length, is a legitimate
+  choice the operator gets to make — but if elapsed minutes are still short of the full
+  scheduled length (both halves), a quiet on-screen note appears ahead of time ("only 12′
+  played of 90′ scheduled") and the button itself confirms via a dialog before committing,
+  naming the shortfall and which half it's still in. Once the scheduled length is reached
+  (regulation or stoppage time), the button ends the match immediately with no prompt.
 
 ### 5.4 End-of-match report
 - **Team xG:** totals, difference, and a verdict string (see §9).

@@ -6,8 +6,8 @@ import { OutcomeGlyph } from "../components/OutcomeGlyph";
 import { ShotEntry } from "../components/ShotEntry";
 import { usePlayers, useShots } from "../db/hooks";
 import {
-  clockDisplay, deleteShot, elapsedMinute, finishMatch, type Match, setClockMinute,
-  startSecondHalf, toggleClock,
+  clockDisplay, deleteShot, elapsedMinute, finishMatch, isBeforeFullTime, type Match,
+  setClockMinute, startSecondHalf, toggleClock,
 } from "../db/schema";
 import { warmModel } from "../xg/model";
 import { playerLeaderboard, teamAggs } from "../xg/verdict";
@@ -134,9 +134,23 @@ export function LiveScreen({ match, onReport }: { match: Match; onReport: () => 
         </ul>
       </section>
 
+      {isBeforeFullTime(match) && (
+        <p className="fulltime-warn">
+          Only {minute}′ played of {match.halfLengthMin * 2}′ scheduled ({clock.half === 1 ? "1st" : "2nd"} half) —
+          "Full time" will still ask before ending early.
+        </p>
+      )}
       <button
         className="primary big"
         onClick={async () => {
+          if (isBeforeFullTime(match)) {
+            const target = match.halfLengthMin * 2;
+            const half = clock.half === 1 ? "still the 1st half" : "still the 2nd half";
+            const ok = confirm(
+              `Only ${minute}′ played of ${target}′ scheduled (${half}). End the match now anyway?`,
+            );
+            if (!ok) return;
+          }
           await finishMatch(match.id);
           onReport();
         }}

@@ -176,6 +176,16 @@ export function clockDisplay(m: Match | undefined): ClockDisplay {
   return { half, overrun, label: overrun ? `${target}+${minute - target}'` : `${minute}'` };
 }
 
+// True once elapsed minutes are still short of the full scheduled length (both halves,
+// halfLengthMin x2) — regardless of which half is currently marked. Ending a match this
+// early is still allowed (a real match can be abandoned, or the operator may just want to
+// close out early) but the operator should be warned first rather than have a single
+// "Full time" tap silently commit to it, especially since undoing that means finding
+// "reopen match" on the next screen rather than just tapping again.
+export function isBeforeFullTime(m: Match): boolean {
+  return elapsedMinute(m) < m.halfLengthMin * 2;
+}
+
 // --- team sheets ---------------------------------------------------
 export async function addPlayer(
   matchId: string,

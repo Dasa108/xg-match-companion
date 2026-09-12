@@ -439,6 +439,10 @@ fieldset.psxg { flex-direction: column; align-items: stretch; }
    separate, see process.md 6.3) — just brighter + bolder than the resting muted tag. */
 .half-tag.overrun { color: var(--ink); font-weight: 700; }
 .clock .mini { min-width: 64px; }
+/* Quiet, ahead-of-time heads-up before an early "Full time" — the button itself still
+   confirms via a native dialog either way (same pattern as MatchListScreen's delete), this
+   is just so the operator isn't surprised by that dialog appearing at all. */
+.fulltime-warn { color: var(--muted); font-size: 12px; text-align: center; margin: 4px 0 0; }
 
 /* shot log */
 .shotlog { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }

@@ -8,7 +8,7 @@ import type { ShotInput } from "../xg/types";
 import { teamAggs } from "../xg/verdict";
 import {
   addPlayer, clockDisplay, createMatch, db, deleteMatch, elapsedMinute, finishMatch,
-  reopenMatch, saveShot, setClockMinute, startMatch, startSecondHalf,
+  isBeforeFullTime, reopenMatch, saveShot, setClockMinute, startMatch, startSecondHalf,
 } from "./schema";
 
 const shotInput: ShotInput = {
@@ -94,6 +94,27 @@ describe("match lifecycle", () => {
     await setClockMinute(id, 45);
     m = (await db.matches.get(id))!;
     expect(clockDisplay(m)).toEqual({ half: 2, label: "40+5'", overrun: true });
+  });
+
+  it("isBeforeFullTime flags ending early regardless of which half is marked", async () => {
+    const id = await createMatch({
+      date: "2026-09-10", label: "x", venue: "", homeName: "R", awayName: "C",
+      halfLengthMin: 20,
+    });
+    await startMatch(id);
+
+    await setClockMinute(id, 12);
+    expect(isBeforeFullTime((await db.matches.get(id))!)).toBe(true); // still 1st half
+
+    await startSecondHalf(id);
+    await setClockMinute(id, 35);
+    expect(isBeforeFullTime((await db.matches.get(id))!)).toBe(true); // 2nd half, still short
+
+    await setClockMinute(id, 40);
+    expect(isBeforeFullTime((await db.matches.get(id))!)).toBe(false); // exactly full time
+
+    await setClockMinute(id, 43);
+    expect(isBeforeFullTime((await db.matches.get(id))!)).toBe(false); // into stoppage time
   });
 
   it("saves shots and aggregates them by side", async () => {

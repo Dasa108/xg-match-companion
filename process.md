@@ -1595,3 +1595,48 @@ only which screen is currently shown. 589 tests unchanged, build clean.
 in for what should be doing X" — worth tracing the existing wiring (why does this screen
 switch at all, right now?) before assuming a button is simply missing, since the fix here
 was informed by finding an unused prop, not just adding a new one blind.
+
+### 6.18 Warn before an early "Full time"
+
+**What.** "When we are clicking full time even before the match timer ends, or if we are
+in the 1st half, it still ends the match — isn't it better to put warnings to the user?"
+Correct — "Full time →" committed immediately regardless of elapsed time or which half was
+current, with zero feedback that it was early. Ending early has to stay *possible* (a real
+match can be abandoned, or an operator may legitimately want to close out ahead of
+schedule), so this isn't about blocking it — just not letting one tap silently commit to
+it, especially since undoing that means finding "reopen match" on the next screen rather
+than tapping "Full time" again.
+
+**Fix.** New pure helper in `schema.ts`, `isBeforeFullTime(m)` — true while elapsed minutes
+are still short of the full scheduled length (`halfLengthMin * 2`), regardless of which
+half is currently marked (so it stays correct even if the operator never pressed
+"2nd half →" and just kept playing under the 1st-half label). Two layers, both driven by
+the same check:
+- A quiet, ahead-of-time note above the button whenever it's true ("Only 12′ played of
+  90′ scheduled (1st half)") — visible before the operator even reaches for the button, not
+  a surprise after the fact.
+- The button itself, when clicked early, confirms via `window.confirm()` — the same native-
+  dialog pattern `MatchListScreen`'s delete-match action already uses, so this isn't a new
+  UI mechanism, just the existing one applied somewhere it was missing. Declining leaves
+  the match live, untouched. Once the scheduled length is actually reached (including
+  stoppage time), the button commits immediately with no prompt, same as before.
+
+**Verified**: added `isBeforeFullTime` to `schema.test.ts` (still 1st half → true; 2nd half
+but short → true; exactly full time → false; into stoppage time → false) — 590 tests now.
+In the browser: created a 1-minute-half match, confirmed the on-screen note reads correctly
+right after kickoff. Did **not** click "Full time" while still early — that would trigger a
+real blocking `confirm()` dialog in the automated browser tab, which the standing browser-
+automation rules say never to trigger via my own actions. Instead fast-forwarded the clock
+past the scheduled length via a direct IndexedDB write (same technique used in 6.13/6.15),
+confirmed the on-screen note correctly disappeared, and only then clicked "Full time" —
+confirmed it proceeded straight to the report screen with no dialog, since by then nothing
+should have prompted. Both branches of the logic are now covered without ever actually
+having to click through a live confirm dialog myself.
+
+**Learn.** Verifying a "does X trigger a warning dialog" feature in an automated browser
+needs its own care: proving the *don't-warn* path directly (click through, watch it not
+prompt) works fine, but proving the *warn* path can't be done by clicking through — that
+click summons a real OS-level dialog my own tooling is instructed never to trigger. The
+way through is the same one used earlier for stoppage-time (6.13/6.15): drive the
+underlying state directly, and read the resulting UI/behavior, rather than performing the
+one user action that would need a modal to resolve.
