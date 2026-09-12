@@ -115,8 +115,10 @@ retraining from many operators' matches) — see §8.8. PSxG didn't, so it moved
      `throw-in` / `penalty`
    - Under pressure: `none` / `light` / `heavy`
 5. **Markers (optional — add the freeze-frame group)**: drag the **GK marker** onto the pitch; toggle
-   `keeper well set` yes/no. Drop up to **6 defender markers** near the shooter. Optionally
-   drop a **pass-origin marker** where the assist came from.
+   `keeper well set` yes/no. Drop up to **6 defender markers** near the shooter — tap an
+   existing one to remove it, or use **undo** to remove just the most recently placed one
+   without needing to aim for its exact marker. Optionally drop a **pass-origin marker**
+   where the assist came from.
 6. **Optional detail** — as built: `assist type` (none / cross / through ball / cutback /
    low pass / high pass) and `first-time` / `one-on-one` are always visible; a
    **"+ more detail"** toggle reveals `technique` (normal / volley / half-volley / lob /

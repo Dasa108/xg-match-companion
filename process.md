@@ -1532,3 +1532,29 @@ their own cards (not a generic accent clash), logged a goal through to the repor
 and confirmed the verdict line now reads as its own emphasized tier below a rule rather
 than a caption under the score. 589 tests unchanged (pure CSS + two one-line icon adds),
 build clean.
+
+### 6.16 Undo for the one marker that accumulates one-at-a-time
+
+**What.** "Add an undo button to go back to the state where the previous player wasn't
+placed." Scoped this to defender markers specifically, not a general undo-anything stack:
+shot/GK/pass-origin are each a single value, so tapping the pitch again already fixes a
+mis-tap by overwriting it — there's nothing to "undo" there beyond what re-tapping already
+does. Defenders are the one marker placed one-at-a-time and accumulated (up to 6), and the
+existing way to remove a specific one — tap its exact marker on the pitch — is fiddly if a
+mis-tap landed close to another marker, or if you just want "get rid of the last one" and
+don't want to hunt for which dot that was.
+
+**Fix.** `ShotEntry.tsx` gained `undoLastDefender()` — `setDefenders(d => d.slice(0, -1))`
+— and a new **"undo"** button in the tools row, shown only when `defenders.length > 0` (so
+it's never visible with nothing to undo). New `undo` icon in `Icon.tsx`: a hooked back-
+arrow, deliberately distinct from `reset`'s full-circle glyph so the two aren't confused —
+undo removes one marker, reset clears the whole shot entry.
+
+**Verified in browser**: placed two defender markers, clicked undo once (removed only the
+second/most-recent one, first one stayed), clicked it again (removed the first, tools row
+correctly dropped back to its normal five buttons with no "undo" showing). 589 tests
+unchanged — this is UI-only interactive wiring with no pure-function surface to unit-test
+(consistent with how other UI-only additions this session, e.g. the "2nd half →" button,
+were verified live rather than given a component-render test, since the project has no
+React-render test setup and adding one for a single button would be disproportionate).
+Build clean.

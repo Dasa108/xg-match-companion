@@ -150,6 +150,15 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
     else setDefenders((d) => [...d, p]);
   }
 
+  // Defenders are the one marker placed one-at-a-time and accumulated (shot/gk/pass are
+  // single values — tapping again already "undoes" a bad one by overwriting it). Removing
+  // a specific defender means tapping its exact marker on the pitch, which is fiddly if a
+  // mis-tap landed close to another one; this always removes whichever was placed last,
+  // no aim required.
+  function undoLastDefender() {
+    setDefenders((d) => d.slice(0, -1));
+  }
+
   function reset() {
     setShot(null);
     setGk(null);
@@ -218,6 +227,11 @@ export function ShotEntry({ match, players, minute, onSaved }: Props) {
             <Icon name={icon} size={15} /> {label}
           </button>
         ))}
+        {defenders.length > 0 && (
+          <button onClick={undoLastDefender}>
+            <Icon name="undo" size={14} /> undo
+          </button>
+        )}
         <button onClick={reset}>
           <Icon name="reset" size={14} /> reset
         </button>

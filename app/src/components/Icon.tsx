@@ -5,7 +5,7 @@
 import type { ReactNode } from "react";
 
 export type IconName =
-  | "target" | "gloves" | "shield" | "pass" | "download" | "reset"
+  | "target" | "gloves" | "shield" | "pass" | "download" | "reset" | "undo"
   | "play" | "pause" | "edit" | "goal-frame" | "chevron" | "football";
 
 const PATHS: Record<IconName, ReactNode> = {
@@ -55,6 +55,14 @@ const PATHS: Record<IconName, ReactNode> = {
     <>
       <path d="M4.3 10a5.7 5.7 0 1 0 1.8-4.2" strokeWidth={1.8} />
       <path d="M4 3.5v3.8h3.8" strokeWidth={1.8} />
+    </>
+  ),
+  // one step back — a hooked arrow, distinct from "reset"'s full circle (undo removes
+  // just the last thing placed; reset clears everything on the pitch).
+  undo: (
+    <>
+      <path d="M16.7 16.7v-5.9a3.3 3.3 0 0 0-3.4-3.3H3.3" strokeWidth={1.8} />
+      <path d="M7.5 11.7L3.3 7.5l4.2-3.3" strokeWidth={1.8} />
     </>
   ),
   play: <path d="M6 4l10 6-10 6V4z" fill="currentColor" stroke="none" />,
