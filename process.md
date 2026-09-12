@@ -1801,3 +1801,13 @@ a smaller, calmer, and more honest piece of UI than either alternative. The oper
 for exactly this after seeing the banner version suggests the banner was solving a slightly
 different problem (visibility into *the update process*) than the one that actually
 mattered (visibility into *whether right now is a moment staleness is possible*).
+
+**Aside — a real CI flake, hit live while deploying this.** Pushing 6.21's commit failed
+the Pages workflow: `npm ci` timed out reaching GitHub's release CDN for
+`onnxruntime-node`'s prebuilt native binary (`ETIMEDOUT`/`ENETUNREACH` on the runner) —
+nothing to do with the code change itself. Re-ran the same job and it passed, confirming
+it was transient. Since a bare network blip on a dependency the build doesn't even use
+(`onnxruntime-node` is test-only, `npm run build` never touches it) shouldn't be able to
+block every future deploy unattended, wrapped the install step in a 3-attempt retry with a
+short backoff, `deploy-pages.yml`. Cheap insurance, not a fix for anything currently
+broken — the underlying flake is GitHub's infrastructure, not this repo's.
