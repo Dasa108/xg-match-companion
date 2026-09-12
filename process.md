@@ -1811,3 +1811,38 @@ it was transient. Since a bare network blip on a dependency the build doesn't ev
 block every future deploy unattended, wrapped the install step in a 3-attempt retry with a
 short backoff, `deploy-pages.yml`. Cheap insurance, not a fix for anything currently
 broken — the underlying flake is GitHub's infrastructure, not this repo's.
+
+### 6.22 Two documentation asks: a full feature list, and a beginner's version of this file
+
+**What.** "Put in the readme also, what every feature is" — plus "update the process md to
+be meant as a learning to a 5 year old ... or make a new file whatever is sensible, to help
+people learn how to build such things."
+
+**README.** Replaced the old "What it does" prose section with a proper `## Features`
+reference, organized by category (logging a shot, the model itself, running the match, the
+report, offline/updates, design, privacy) covering everything shipped through 6.21 — not
+just the original M1–M4 feature set, but everything added since (undo, back-to-matches,
+the early-full-time warning, the auto-update + offline flag, the offline-mode toggle, the
+whole visual redesign). Also fixed the test count reference (589 → 593, stale from before
+this session's later additions).
+
+**The learning doc.** Did *not* rewrite `process.md` itself into simple language — that
+file's whole value is being the detailed, technical, exact-commands ground truth this
+project has leaned on all session (spec.md's ground-truth counterpart for *how*, not
+*what*); flattening it into beginner language would have destroyed the thing that made it
+useful for the rest of this build. Instead, new `LEARN.md`: the same real story, told in
+plain language with everyday analogies (calibration ≈ a weather forecaster's percentages
+actually meaning something; ONNX ≈ exporting a Word doc to PDF so anything can open it;
+train/test split ≈ studying from practice problems vs. being graded on ones you've never
+seen), organized as a learning narrative rather than a chronological log, with pointers
+back to the matching `process.md` section for anyone who wants the real technical detail
+underneath a given idea. Closes with a short, honest, reusable checklist for "if you want
+to build something like this yourself."
+
+**Learn.** These two documents now do genuinely different jobs for genuinely different
+readers, on purpose: `process.md` is "I already know how to build things, show me exactly
+what happened here so I can learn from the specific decisions." `LEARN.md` is "I don't yet
+know how to build things like this at all, walk me through the shape of it." Neither is a
+replacement for the other, and trying to make one file serve both audiences usually serves
+neither well — better to let the ground-truth log stay dense and exact, and write the
+simple version as its own, separately-paced piece.

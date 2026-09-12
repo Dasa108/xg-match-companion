@@ -13,55 +13,128 @@ had the better xG — volume and efficiency — regardless of who actually score
 > 📄 The full functional spec lives in [`spec.md`](spec.md) — that's the ground-truth
 > source of truth for every decision. The build log / learning journal is
 > [`process.md`](process.md) — a step-by-step "what / why / how" of how this was built,
-> written up as it happened.
+> written up as it happened. New to building something like this?
+> [`LEARN.md`](LEARN.md) explains the whole project in plain language, no experience
+> assumed.
 
 ---
 
-## What it does
+## Features
 
-**Log a shot in a few taps.** Tap the pitch where the shot was taken (drawn full, portrait,
-attacking upward), optionally drop the keeper and up to 6 defender markers, pick the
-shooter, and tap a few quick chips (body part, situation, pressure). Everything except
-location, shooter, and outcome has a sensible default — a shot can be logged in seconds, or
-in much more detail if you have time.
+Everything below is real and shipped — not a roadmap. Grouped by what it's for.
 
-- **Live xG**, computed instantly in the browser (no network needed) — a LightGBM model
-  trained on 34,809 real StatsBomb Open Data shots, with an instant one-line explanation
-  ("close range, tight angle, keeper off his line") and a confidence band.
-- **Adapts to how much you actually enter.** There's no fixed "quick mode / detailed mode"
-  — one model handles minimal, partial, or fully-detailed input and is calibrated
-  separately for each completeness level, so a rushed 5-second entry and a careful 25-second
-  one are each as accurate as they can be for what was captured.
+### Logging a shot
+
+- **Tap-to-place pitch** — the full pitch, portrait, both penalty areas, attacking upward.
+  A tool row switches what a tap places: the **shot** location, the **keeper**, up to **6
+  defender** markers, or a **pass** origin (for the assist).
+- **Remove a marker** two ways: tap an existing defender dot to remove *that one*, or tap
+  **undo** to remove whichever defender was placed *most recently* — no need to aim for a
+  specific dot if you just mis-tapped.
+- **Shooter attribution** — pick a side, then a player from that team's current on-pitch
+  list.
+- **Quick chips**, sensible defaults pre-selected: body part, situation (open play / fast
+  break / corner / free kick / throw-in / penalty), pressure. A **"+ more detail"** toggle
+  reveals technique, "beat a defender", open goal, and rebound for when you have time to be
+  thorough.
+- **Outcome**: goal / saved / off target / blocked / post.
+- Only the shot location, the shooter, and the outcome are actually required — every other
+  field has a default, so one shot can be logged in a few seconds or in much more depth.
+
+### The xG model itself
+
+- **Live xG**, computed instantly in the browser (no network call) — a LightGBM model
+  trained on 34,809 real StatsBomb Open Data shots, released only after passing an explicit
+  accuracy gate (see "How good is the model?" below).
+- **A one-line explanation and a confidence band** with every number ("close range, tight
+  angle, keeper off his line"), so the figure isn't just a black-box output.
+- **Adapts to how much you actually entered** — there's no separate "quick mode" and
+  "detailed mode": one model handles minimal, partial, or fully-detailed input, calibrated
+  separately for each completeness level, so a rushed 5-second entry and a careful
+  25-second one are each as accurate as they can be for what was actually captured.
+- **Penalties** are a fixed 0.76, not modeled — deliberately, since real-world penalty
+  conversion is well known and nearly context-free; a documented exception, not a hidden
+  shortcut (verified: real inference for everything else, checked against the Python model
+  to five decimal places).
 - **Post-shot xG (PSxG) — optional.** For any shot that's on target (goal / saved / post),
-  you can tap where the ball crossed the goal line for a second, richer probability
-  ("how good was the placement," not just "how good was the chance"). Entirely optional —
-  skipping it changes nothing else.
-- **Match clock**, broadcast-style: start/pause, manual override, and a half tag ("1st
-  half" / "2nd half"). You set each half's length when creating the match (default 45 min);
-  once a half runs past that, the clock switches to stoppage-time notation (`45+3′`), and
-  an explicit "2nd half →" button moves it into the second half.
-- **Live tallies** — running team xG and per-player xG, one tap away, throughout the match.
+  an extra "tap where it went" step on the goal frame gives a second, richer probability —
+  *how good the placement was*, on top of *how good the chance was*. Skipping it changes
+  nothing else about the shot.
 
-**At full time, a complete report:**
-- Team xG comparison + a plain-English verdict string (who *should* have won, on chances).
-- Player xG leaderboard — shots, total xG, xG/shot, best single chance, goals, and
-  goals-minus-xG (finishing over/under-performance).
-- Shot map, cumulative xG timeline, and a shot-quality histogram, all inline SVG.
-- Shot outcomes are colour **and** shape coded (★ goal, ● saved, ◆ post, ▲ blocked,
-  ○ off target) so it's never colour-alone — checked against colour-blindness with an
-  automated contrast/separation validator, not eyeballed.
-- A confetti burst whenever a goal is logged.
+### Running the match
 
-**Take your data with you** — three export formats, no server involved:
-- **Full report** — a single self-contained HTML file (score, verdict, timeline, shot map,
-  full leaderboard, every shot's full data) that opens straight from disk, no internet
-  needed, and prints / "Save as PDF" cleanly.
-- **JSON** — the same data, machine-readable.
-- **CSV** — one row per shot, for your own spreadsheet analysis.
+- **Team sheets** at setup — starting XI + subs per side, editable any time (subs can come
+  on mid-match).
+- **Operator-set half length** (default 45 min) when creating the match.
+- **Broadcast-style match clock** — start/pause, manual minute override, a "1st half" /
+  "2nd half" tag, and automatic stoppage-time notation (`45+3′`) once a half runs past its
+  scheduled length. An explicit **"2nd half →"** button moves the tag across; the clock
+  itself never resets — halftime is just a pause, like any other stoppage.
+- **A heads-up before ending early** — if "Full time" is tapped before the match has
+  actually reached its scheduled length, a quiet note appears ahead of time and the button
+  itself asks for confirmation, naming the shortfall and which half it's in. Ending early is
+  still always allowed (abandoned matches happen); it's just never silent.
+- **Live tallies** — running team xG and shot counts in the header, per-player running xG
+  one tap away.
+- **A confetti burst** whenever a goal is logged.
+- **"Back to matches"** on the report screen — an explicit, clearly-labeled way back to the
+  match list, plus a secondary **"reopen match"** if you need to go back and add or fix a
+  shot after finishing.
 
-**Works with no signal.** Once you've loaded the site once, a service worker caches
-everything — the app shell and both ML models — so it keeps working with zero connectivity,
-which is the actual condition on most sidelines.
+### The full-time report
+
+- **Team xG comparison** and a plain-English verdict string — who *should* have won, on
+  chances, and whether that matches the scoreline.
+- **Player xG leaderboard** — shots, total xG, xG/shot, best single chance, goals, and
+  goals-minus-xG (finishing over/under-performance) — plus a called-out best-xG player and,
+  separately, the most efficient one (xG/shot, minimum 3 shots).
+- **Shot map, cumulative xG timeline, and a shot-quality histogram**, all inline SVG (no
+  charting library).
+- **Colour-blind-safe outcomes** — every shot outcome has its own shape *and* colour (★
+  goal, ● saved, ◆ post, ▲ blocked, ○ off target), so identity is never colour-alone. The
+  whole categorical palette (team identity / value judgement / outcome status, kept as
+  three separate colour roles on purpose) was checked with an automated OKLab contrast and
+  colour-blindness separation tool, not eyeballed.
+- **Three export formats**, no server involved:
+  - **Full report** — a single self-contained HTML file (score, verdict, timeline, shot
+    map, full leaderboard, every shot's full data) that opens straight from disk with no
+    internet, and prints / "Save as PDF" cleanly.
+  - **JSON** — the same data, machine-readable (`xg-match-companion/v1` schema).
+  - **CSV** — one row per shot, for your own spreadsheet analysis.
+
+### Works with no signal, and knows when it might be stale
+
+- **Fully offline** once loaded once — a service worker precaches the whole app, including
+  both ML models, so every core flow (logging, prediction, the report, export) keeps
+  working with zero connectivity.
+- **Updates itself automatically** — when a new version is deployed, it activates and
+  reloads on its own next time you're online. No manual "reload to update" step.
+- **A passive offline flag** — since auto-update can't check for anything without a
+  connection, a quiet note ("Offline — may not be the latest version.") appears whenever
+  you're disconnected, and disappears the moment you're back online. Nothing to act on,
+  just an honest fact about right now.
+- **An opt-out**, for the rare case you'd rather always fetch fresh than ever risk a stale
+  cache: a toggle on the match list turns offline caching off entirely (every load then
+  needs a connection) or back on.
+
+### Design
+
+- **A validated dark "sports broadcast" theme** — bold tabular numerals on the hero
+  moments (scoreboard, live xG), a categorical colour palette computed and checked (not
+  chosen by eye) so team identity, value judgement, and shot-outcome status never collide.
+- **A hand-rolled icon set** — no emoji, no icon webfont, so the app stays fully offline-safe
+  with no font-loading step.
+- **Original ambient background art** — grain texture, a football line-art watermark, soft
+  colour blooms, and a hand-built anime-style illustration (a ball bursting through a
+  cel-shaded splash) — all original vector work, not stock imagery, specifically so nothing
+  shipped carries a licence question.
+- **Screen transitions** and consistent card/heading treatment across every screen.
+
+### Privacy
+
+- **Everything stays on your device** — IndexedDB storage, no accounts, no analytics, no
+  data ever leaves it except a deliberate export you download yourself.
+- **Deleting a match** asks for confirmation first.
 
 ---
 
@@ -104,7 +177,7 @@ npm run dev       # dev server at http://localhost:5173
 Other useful commands (run from `app/`):
 
 ```bash
-npm test          # 589 tests — feature/model parity, verdict logic, DB lifecycle, report HTML
+npm test          # 593 tests — feature/model parity, verdict logic, DB lifecycle, report HTML
 npm run build     # typecheck + production build (also runs the test-fixture sync)
 npm run preview   # serve the production build locally, incl. the offline service worker
 ```
@@ -150,7 +223,8 @@ partial / full detail entered), and both passed their release gate. Full numbers
 ```
 xG/
   spec.md                 # ground-truth functional spec — read this first
-  process.md              # build log / learning journal
+  process.md              # build log / learning journal (detailed, technical)
+  LEARN.md                 # the same story, explained simply — start here if you're new
   training/                # Python: data pull → features → train → evaluate → export ONNX
   models/                  # released model.onnx + psxg_model.onnx, calibrators, metrics
   app/                     # the website (React + Vite + TS)
