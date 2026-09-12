@@ -5,7 +5,13 @@ import { VitePWA } from "vite-plugin-pwa";
 // Service worker precaches the whole app — shell, model.onnx, the ~14 MB wasm — so once the
 // site has been opened with a connection it works fully offline pitchside. No install
 // prompt / add-to-home-screen (spec §10); it just registers and caches.
-export default defineConfig({
+//
+// `base`: GitHub Pages serves a project site from a /<repo-name>/ subpath, not root, so a
+// production build needs every asset URL prefixed with it — get this wrong and the page
+// loads but every JS/CSS/model request 404s. Only applied for `vite build`, never `vite
+// dev`/`vite preview`, so local development still runs at plain `/`.
+export default defineConfig(({ command }) => ({
+  base: command === "build" ? "/xg-match-companion/" : "/",
   plugins: [
     react(),
     VitePWA({
@@ -29,4 +35,4 @@ export default defineConfig({
     }),
   ],
   server: { port: 5173 },
-});
+}));
