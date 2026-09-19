@@ -366,6 +366,13 @@ Penalties bypass the model entirely (constant xG = 0.76).
    **Monotonic constraints:** xG decreasing in `distance`, `dist_x`, `defenders_in_cone`,
    `def_within_3/5`, `gk_in_cone`; increasing in `angle`, `nearest_def_dist`, `one_on_one`,
    `open_goal`. No oversampling — optimise log loss directly.
+   *Algorithm choice checked (2026-09-19, `training/experiments/REPORT.md`):* bagged LightGBM
+   (seed-averaged and match-bootstrap), XGBoost and a random forest were each compared with
+   this model on the frozen test set with a paired cluster bootstrap. None clearly beats it;
+   the only real signal is a tuned LightGBM (15 leaves, depth 6) about 0.003 better in log
+   loss on `full` inputs, none on `partial`/`minimal`. Not adopted: too small to justify
+   regenerating the ONNX file, calibrators and parity fixtures. Revisit if the model is
+   retrained for another reason.
 5. **Calibration:** fit isotonic regression **per completeness bucket** (`minimal` /
    `partial` / `full`) on a held-out calibration slice. Verify reliability diagram +
    Expected Calibration Error and Σ xG ≈ Σ goals *within each bucket*.

@@ -1846,3 +1846,74 @@ know how to build things like this at all, walk me through the shape of it." Nei
 replacement for the other, and trying to make one file serve both audiences usually serves
 neither well — better to let the ground-truth log stay dense and exact, and write the
 simple version as its own, separately-paced piece.
+
+
+---
+
+## Phase 7 — Model experiments
+
+### 7.1 Did bagging, XGBoost or a random forest beat the shipped model?
+
+**What.** A question came in as "we built this with XGBoost — have we tried bagging or
+gradient boosting?" First step was checking the premise, not answering it: the model is
+**LightGBM** (a sibling of XGBoost), which *is* gradient boosting, and it already bags in a
+light way (`subsample=0.8`, `colsample_bytree=0.8`: each tree sees a random 80% of rows and
+features). What had genuinely never been tried was a separate bagged ensemble, other
+algorithms, or any hyper-parameter search — only the two logistic baselines had ever been
+compared against.
+
+**How.** `training/experiments/model_comparison.py`, a scratch experiment that never writes
+to `models/`. It reuses the shipped pipeline's own split, augmentation, early-stopping set,
+per-bucket isotonic calibration and test metrics, so every candidate is judged the same way:
+LightGBM refit, LightGBM grid-tuned, 5 seed-averaged LightGBMs, 5 match-bootstrap-bagged
+LightGBMs, XGBoost (grid), random forest (grid). Grids were scored on the validation set
+only. Differences on the test set carry a **paired cluster bootstrap over test matches** (shots
+in one match aren't independent), so a difference only counts if its 95% interval excludes
+zero.
+
+**Harness check first.** The refit of the shipped configuration reproduced the shipped model
+*bit-for-bit* (max prediction difference 0.0, same best iteration 290) before anything was
+trusted — if that had drifted, every comparison after it would have been meaningless.
+
+**Result.** Nothing clearly beat the shipped model. Bagging added nothing (5 seeds averaged:
+0.2627 vs 0.2630, and no better than the average single seed, 0.2626). XGBoost was no better;
+the random forest was worse on Brier, weaker vs StatsBomb's own xG, and 38× as many tree
+nodes. On minimal input all six models were within 0.0005 — the ceiling is the information
+entered, not the algorithm.
+
+**The one ambiguous result, and how it was resolved.** A grid-tuned LightGBM (15 leaves,
+depth 6) looked 0.0049 better with an interval that just touched zero — about the size of
+one model's seed-to-seed range. A single fit each can't separate "better config" from "lucky
+seed", so `seed_check.py` retrained both configs with 10 seeds each: tuned 0.2606 vs shipped
+0.2636, a real but smaller **0.0030** gain (interval −0.0060 to −0.0006), on full inputs only.
+Verdict: not worth regenerating the ONNX file, calibrators and parity fixtures now; adopt it
+if the model is retrained anyway.
+
+**Decision.** Shipped model unchanged. Full write-up: `training/experiments/REPORT.md`;
+interactive version published as an artifact.
+
+**Learn.**
+- **Check the premise of a question before answering it.** "XGBoost" was LightGBM, and
+  "have we tried gradient boosting" was already yes — the useful answer was the three things
+  that genuinely *hadn't* been tried.
+- **Measure the noise before reading differences.** The seed-to-seed spread of the *same*
+  model (SD 0.0030, range 0.0095) was as large as most of the gaps between models. Without
+  that yardstick, "XGBoost is 0.006 worse" and "tuned is 0.005 better" both look like
+  findings. Ten seeds each turned one of them into a real (small) effect and the rest into
+  noise.
+- **A single lucky comparison overstates the effect.** The tuned model's single-seed gain
+  (−0.0049) shrank to −0.0030 once seed luck averaged out — a small instance of winner's
+  curse.
+- **Pre-agree the ship criterion.** "Only ship a change that beats the current model by more
+  than the noise" was written down before running, which made "keep the shipped model" an
+  easy, honest call rather than a judgement made after seeing which numbers looked good.
+
+**Gotchas / my own mistakes while building this.** The results page's first render had blank
+charts: I'd called `el(svg, …)` where the first argument had to be a tag name (`"line"`,
+`"circle"`) — a bug only a real render exposed, same lesson as 4.1/4.2. Separately, I wrote
+conclusion-shaped chart titles ("every difference is inside the noise") before any results
+existed and had to replace them with neutral ones — a chart title is a claim, and it
+shouldn't precede the data it describes. Known limits of the experiment itself: the
+validation set that picks grid winners is also the boosted models' early-stopping set
+(flatters boosters slightly), the test set was looked at twice, and it's one split with 456
+test goals. Not tried: CatBoost, stacking, feature changes.

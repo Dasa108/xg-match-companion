@@ -1,0 +1,385 @@
+<title>Boosting vs Bagging</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #f2f6f1;
+    --surface: #fafcf9;
+    --ink: #15221b;
+    --ink2: #4a5a50;
+    --line: #d0dad2;
+    --band: #dde8df;
+    --ref: #1d7a4c;
+    --cand: #365c86;
+    --good: #1d7a4c;
+    --bad: #b23b32;
+    --sans: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1410; --surface: #131c17; --ink: #e4eee7; --ink2: #9fb0a6;
+      --line: #26342b; --band: #1b2a21; --ref: #43c184; --cand: #86adda;
+      --good: #43c184; --bad: #ef7a6f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1410; --surface: #131c17; --ink: #e4eee7; --ink2: #9fb0a6;
+    --line: #26342b; --band: #1b2a21; --ref: #43c184; --cand: #86adda;
+    --good: #43c184; --bad: #ef7a6f;
+  }
+
+  body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); }
+  .wrap { max-width: 880px; margin: 0 auto; padding-inline: 20px; padding-block: 36px 64px; }
+  .eyebrow { font: 500 11.5px/1 var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--ink2); margin: 0 0 14px; }
+  h1 { font: 700 clamp(34px, 7vw, 54px)/1.02 var(--sans); letter-spacing: -.02em; margin: 0 0 18px; text-wrap: balance; }
+  h2 { font: 600 20px/1.25 var(--sans); letter-spacing: -.01em; margin: 0 0 6px; text-wrap: balance; }
+  .sub { color: var(--ink2); margin: 0 0 18px; max-width: 65ch; }
+  .lede { font-size: 18px; line-height: 1.5; max-width: 62ch; margin: 0 0 22px; text-wrap: pretty; }
+  section { margin-top: 52px; }
+  p { max-width: 65ch; margin: 0 0 12px; }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 26px; padding: 14px 0; border-block: 1px solid var(--line); font-size: 13px; color: var(--ink2); }
+  .facts b { color: var(--ink); font: 500 13px var(--mono); }
+
+  .findings { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+  .findings li { max-width: 68ch; padding-left: 16px; border-left: 2px solid var(--line); }
+  .findings li b { display: block; font-weight: 600; margin-bottom: 2px; }
+
+  .tabs { display: flex; gap: 6px; margin: 0 0 12px; flex-wrap: wrap; }
+  .tabs button { font: 500 13px var(--sans); color: var(--ink2); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  .tabs button[aria-selected="true"] { color: var(--bg); background: var(--ink); border-color: var(--ink); }
+  .tabs button:focus-visible { outline: 2px solid var(--cand); outline-offset: 2px; }
+
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th { text-align: right; font: 500 11px var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--ink2); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--ink); white-space: nowrap; }
+  td { text-align: right; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); font: 400 13px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; font-family: var(--sans); white-space: normal; min-width: 150px; padding-left: 0; }
+  td:first-child { font-size: 14px; font-weight: 500; }
+  tr.ref td:first-child { color: var(--ref); }
+  .ci { color: var(--ink2); font-size: 11.5px; }
+  .tag { display: inline-block; font: 500 10.5px var(--sans); padding: 2px 7px; border-radius: 99px; border: 1px solid currentColor; margin-left: 6px; }
+  .tag.better { color: var(--good); } .tag.worse { color: var(--bad); } .tag.same { color: var(--ink2); }
+
+  figure { margin: 0 0 26px; }
+  figcaption { font-size: 13px; color: var(--ink2); margin-top: 4px; max-width: 65ch; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  svg .t { fill: var(--ink2); font: 11px var(--mono); }
+  svg .tl { fill: var(--ink); font: 500 12.5px var(--sans); }
+  svg .tv { fill: var(--ink); font: 500 10.5px var(--mono); }
+  svg .axis { stroke: var(--line); stroke-width: 1; }
+  svg .grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 4; }
+  svg .zero { stroke: var(--ink); stroke-width: 1.5; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--ink2); margin: 0 0 10px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+
+  details { border-top: 1px solid var(--line); padding: 12px 0; }
+  details:last-of-type { border-bottom: 1px solid var(--line); }
+  summary { cursor: pointer; font-weight: 600; }
+  summary:focus-visible { outline: 2px solid var(--cand); outline-offset: 3px; }
+  .grid-tbl { margin-top: 12px; }
+  .grid-tbl tr.best td { color: var(--ref); font-weight: 500; }
+  code { font: 12.5px var(--mono); background: var(--band); padding: 1px 5px; border-radius: 4px; }
+  pre { font: 12.5px/1.6 var(--mono); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow-x: auto; margin: 10px 0 0; }
+  ul.plain { margin: 0 0 12px; padding-left: 18px; max-width: 65ch; }
+  ul.plain li { margin-bottom: 6px; }
+</style>
+
+<main class="wrap">
+  <p class="eyebrow">xG Match Companion · model experiment</p>
+  <h1>Boosting vs Bagging</h1>
+  <p class="lede">We put bagging, XGBoost, a random forest and a tuned LightGBM up against the shipped model on 4,988 held-out shots. None clearly beats it. The one real gain is about 0.003 in log loss, on full-detail inputs only.</p>
+
+  <div class="facts" id="facts"></div>
+
+  <section id="findings">
+    <h2>What we found</h2>
+    <ul class="findings"><li><b>Bagging did not help.</b>The model is already gradient boosting, and each tree already sees a random 80% of shots and features. Averaging five LightGBM models scored 0.2627 against 0.2630 shipped, no better than the average single model (0.2626). Bagging by resampling whole matches scored 0.2631 with a clearly worse Brier score (+0.0007).</li><li><b>XGBoost and a random forest were no better, and the forest is far heavier.</b>XGBoost scored 0.2688 (+0.0059 vs shipped, interval −0.0002 to +0.0142) with a slightly lower AUC (0.8041 vs 0.8051). The random forest scored 0.2652, a clearly worse Brier score, a weaker match to StatsBomb’s own xG (0.884 vs 0.905), and 38 times as many tree nodes (433,826 vs 11,536), which would swell the offline download.</li><li><b>Most gaps are smaller than re-rolling the random seed.</b>Retraining the shipped configuration with ten different seeds moves full-input log loss by a standard deviation of 0.0030 and a spread of 0.0095. Every full-input difference in the first comparison is smaller than that spread.</li><li><b>The one real signal: a tuned LightGBM, about 0.003 better.</b>The grid picked 15 leaves and depth 6 (shipped: 31 leaves, depth 5). Averaged over ten seeds each it scored 0.2606 vs 0.2636 on full inputs, 0.0030 better, interval −0.0060 to −0.0006. On partial and minimal inputs it made no difference. The single-seed comparison had shown −0.0049, so part of that was luck. It is also 14% smaller.</li><li><b>With minimal input, the algorithm does not matter.</b>All six models land within 0.0005 of each other (0.2672 to 0.2677). That ceiling comes from how little the operator entered, not from which tree method reads it.</li><li><b>Recommendation: keep the shipped model for now.</b>A 1% log-loss gain in one input level does not justify retraining, since every xG number would shift slightly and the ONNX file, calibrators and parity fixtures would all be regenerated. If the model is retrained anyway, for example with more data, adopt the tuned configuration then and judge changes with multi-seed comparisons like this one.</li></ul>
+  </section>
+
+  <section id="scoreboard">
+    <h2>Scoreboard</h2>
+    <p class="sub">Each model scored on the same held-out test shots, after the same per-bucket isotonic calibration the shipped model uses. “Δ vs shipped” is paired: lower is better, and a difference only counts when its 95% interval excludes zero.</p>
+    <div class="tabs" role="tablist" aria-label="Input completeness" id="tabs"></div>
+    <div class="scroll"><table id="score"></table></div>
+  </section>
+
+  <section id="forest">
+    <h2>How far from the shipped model?</h2>
+    <p class="sub">Change in test log loss versus the shipped LightGBM, with a 95% interval from resampling whole matches (shots in one match are not independent). Green or red means the interval clears zero.</p>
+    <div id="forests"></div>
+  </section>
+
+  <section id="noise">
+    <h2>Is that more than luck?</h2>
+    <p class="sub">The reference for “noise” is the shipped model itself, retrained five times with only the random seed changed. The shaded band is how far a single retrain wanders.</p>
+    <figure id="dot"></figure>
+    <figure id="curve"></figure>
+  </section>
+
+  <section id="followup">
+    <h2>One follow-up: is the tuned LightGBM really better?</h2>
+    <p class="sub">In the first run the tuned model looked about 0.005 better, roughly the size of one model’s seed-to-seed range, so luck of the seed could explain it. Each configuration was retrained with 10 different seeds and compared on average.</p>
+    <figure id="fu"></figure>
+    <div class="scroll"><table id="futbl"></table></div>
+  </section>
+
+  <section id="grids">
+    <h2>Tuning grids</h2>
+    <p class="sub">Every configuration tried, scored on the validation set only (calibrators fit on the calibration split). The test set was not used to pick any configuration.</p>
+    <div id="gridlist"></div>
+  </section>
+
+  <section id="method">
+    <h2>How it was run</h2>
+    <ul class="plain">
+      <li><b>Same protocol as the shipped model.</b> Match-level split, the same augmented training set (feature-group dropout and jitter), the same early-stopping set, the same per-bucket isotonic calibration on calibration ∪ validation. The refit of the shipped configuration reproduces the shipped model exactly (maximum prediction difference <code id="hdiff"></code>, same best iteration).</li>
+      <li><b>Bagging, two ways.</b> Seed-averaging (five LightGBM models differing only in seed) and match-bootstrap bagging (five models, each trained on a resample of whole training matches). Probabilities are averaged, then calibrated as one model. A random forest is the classic bagging of deep trees.</li>
+      <li><b>Monotone constraints</b> (distance, angle, defenders, and so on) are kept for LightGBM and XGBoost. The random forest ran unconstrained: scikit-learn does not support monotone constraints together with missing values, and missing values are how this model represents “not entered”.</li>
+      <li><b>Uncertainty.</b> Paired cluster bootstrap, 4,000 resamples of the test matches.</li>
+      <li><b>Known limits.</b> The validation set that picks each grid winner is also the set the boosted models early-stop on, which flatters all boosted models a little (the forest has no early stopping). The test set was looked at twice: once for the six-model comparison and once for the 10-seed follow-up on the config that grid picked. One split, one test set of 456 goals.</li>
+      <li><b>Not tried:</b> CatBoost, stacking, feature changes, tuning beyond the small grids above, and a second random split.</li>
+    </ul>
+    <pre>cd training
+.venv/bin/pip install -r requirements-experiments.txt
+.venv/bin/python experiments/model_comparison.py
+.venv/bin/python experiments/plot_results.py</pre>
+  </section>
+</main>
+
+<script>
+const D = {"harness": {"refit_vs_shipped_max_abs_diff": 0.0, "shipped_best_iteration": 290, "refit_best_iteration": 290}, "test_shots": 4988, "test_goals": 456, "test_matches": 197, "candidates": {"lgbm_current": {"label": "LightGBM (shipped config)", "meta": {"best_iteration": 290, "tree_nodes": 11536, "fit_s": 7.6}, "buckets": {"full": {"log_loss": 0.2630294684829744, "brier": 0.07086850478080194, "auc": 0.8050539245288861, "pr_auc": 0.3331859082672411, "ece": 0.012989303424630139, "cal_in_large": 1.0330036204427895, "corr_vs_statsbomb": 0.9048920437457738}, "partial": {"log_loss": 0.2595694770682598, "brier": 0.07198443536529156, "auc": 0.7915684373112837, "pr_auc": 0.3050047775942517, "ece": 0.0029187039213438917, "cal_in_large": 1.0207529086723612, "corr_vs_statsbomb": 0.8982571430451973}, "minimal": {"log_loss": 0.2674361935441064, "brier": 0.07492049979466249, "auc": 0.7702826682770476, "pr_auc": 0.26054045367293494, "ece": 0.007966018921957684, "cal_in_large": 1.042131953800744, "corr_vs_statsbomb": 0.8033416015884784}}}, "lgbm_tuned": {"label": "LightGBM (grid-tuned on val)", "meta": {"best_iteration": 344, "tree_nodes": 9968, "fit_s": 6.3, "chosen_cfg": {"num_leaves": 15, "max_depth": 6, "min_child_samples": 60}}, "buckets": {"full": {"log_loss": 0.2580938021216767, "brier": 0.07069792236685032, "auc": 0.8065179290348554, "pr_auc": 0.3366439889252816, "ece": 0.014444986547721382, "cal_in_large": 1.0277047490469975, "corr_vs_statsbomb": 0.9064093529221097, "delta_ll_vs_current": {"delta": -0.004935666361297663, "ci_lo": -0.012024523871976209, "ci_hi": 0.00014321383867027786}, "delta_brier_vs_current": {"delta": -0.00017058241395161822, "ci_lo": -0.0004955159350370752, "ci_hi": 0.0001581233755810481}}, "partial": {"log_loss": 0.25639856234804853, "brier": 0.0717142564162745, "auc": 0.792896711106982, "pr_auc": 0.31436759607016707, "ece": 0.010591265818021542, "cal_in_large": 1.024056439857803, "corr_vs_statsbomb": 0.9006701854242076, "delta_ll_vs_current": {"delta": -0.0031709147202112612, "ci_lo": -0.008655999414423932, "ci_hi": 0.00013243132604622113}, "delta_brier_vs_current": {"delta": -0.0002701789490170459, "ci_lo": -0.0006265381237080416, "ci_hi": 7.833394488361898e-05}}, "minimal": {"log_loss": 0.2677064730807831, "brier": 0.07490269111166553, "auc": 0.7693274724764251, "pr_auc": 0.25872023753442963, "ece": 0.007538351898953493, "cal_in_large": 1.0371692443577238, "corr_vs_statsbomb": 0.8018239486918718, "delta_ll_vs_current": {"delta": 0.00027027953667670753, "ci_lo": -0.0006156193338697191, "ci_hi": 0.0012013188464961324}, "delta_brier_vs_current": {"delta": -1.780868299696582e-05, "ci_lo": -0.0003043008757696339, "ci_hi": 0.0002708390120973987}}}}, "lgbm_seedbag5": {"label": "LightGBM \u00d7 5 seeds (averaged)", "meta": {"members": 5, "tree_nodes": 53611, "fit_s": 21.0}, "buckets": {"full": {"log_loss": 0.2626714198724302, "brier": 0.07083531467784786, "auc": 0.8044868072652949, "pr_auc": 0.32544083143532654, "ece": 0.013480251410240656, "cal_in_large": 1.0328801765029119, "corr_vs_statsbomb": 0.9049564706783326, "delta_ll_vs_current": {"delta": -0.0003580486105442542, "ci_lo": -0.001324299073998317, "ci_hi": 0.0005664819043164318}, "delta_brier_vs_current": {"delta": -3.3190102954072824e-05, "ci_lo": -0.00028589620217030497, "ci_hi": 0.00021538058728958934}}, "partial": {"log_loss": 0.2569584803438601, "brier": 0.07183928299381256, "auc": 0.7907521174958578, "pr_auc": 0.3124960003800014, "ece": 0.006420677446560537, "cal_in_large": 1.0240130166789516, "corr_vs_statsbomb": 0.9019433745509798, "delta_ll_vs_current": {"delta": -0.0026109967243996735, "ci_lo": -0.007879120991999014, "ci_hi": 0.0005310827768697729}, "delta_brier_vs_current": {"delta": -0.00014515237147899265, "ci_lo": -0.00043780958561647144, "ci_hi": 0.00014546291864252044}}, "minimal": {"log_loss": 0.2674589459574175, "brier": 0.07486422853843458, "auc": 0.7697012763041761, "pr_auc": 0.261175463322883, "ece": 0.007887595938629812, "cal_in_large": 1.042350086492079, "corr_vs_statsbomb": 0.804911456640476, "delta_ll_vs_current": {"delta": 2.275241331104678e-05, "ci_lo": -0.0006837075059773594, "ci_hi": 0.0007263591503203314}, "delta_brier_vs_current": {"delta": -5.627125622789459e-05, "ci_lo": -0.00029815629068766816, "ci_hi": 0.00016551707051855265}}}}, "lgbm_matchbag5": {"label": "LightGBM \u00d7 5 match-bootstrap bags", "meta": {"members": 5, "tree_nodes": 44406, "fit_s": 20.3}, "buckets": {"full": {"log_loss": 0.26304954948538245, "brier": 0.07160016055786418, "auc": 0.8020025239621561, "pr_auc": 0.31887813572548807, "ece": 0.01798845378794321, "cal_in_large": 1.036263934326482, "corr_vs_statsbomb": 0.9034450173544999, "delta_ll_vs_current": {"delta": 2.0081002408098494e-05, "ci_lo": -0.008548688643904267, "ci_hi": 0.008094715955287365}, "delta_brier_vs_current": {"delta": 0.0007316557770622609, "ci_lo": 0.00024249228354253716, "ci_hi": 0.0012424352944560943}}, "partial": {"log_loss": 0.2600624794330995, "brier": 0.07222211090874388, "auc": 0.791892158684443, "pr_auc": 0.30136476113899796, "ece": 0.010989932293204371, "cal_in_large": 1.0322735150691191, "corr_vs_statsbomb": 0.898516506227239, "delta_ll_vs_current": {"delta": 0.0004930023648397438, "ci_lo": -0.0012580216334997962, "ci_hi": 0.002299078179071014}, "delta_brier_vs_current": {"delta": 0.0002376755434523153, "ci_lo": -0.0002420357911687003, "ci_hi": 0.0007318271853218271}}, "minimal": {"log_loss": 0.2672346112839126, "brier": 0.07488082938334437, "auc": 0.7695050595376348, "pr_auc": 0.26108349610931664, "ece": 0.00847624089399709, "cal_in_large": 1.042073456307167, "corr_vs_statsbomb": 0.7993106124144901, "delta_ll_vs_current": {"delta": -0.00020158226019379209, "ci_lo": -0.0016470926291230622, "ci_hi": 0.001266272307081004}, "delta_brier_vs_current": {"delta": -3.967041131812519e-05, "ci_lo": -0.0004446822771542631, "ci_hi": 0.00037862626643149066}}}}, "xgb_tuned": {"label": "XGBoost (grid-tuned on val)", "meta": {"best_iteration": 367, "tree_nodes": 18991, "fit_s": 7.5, "chosen_cfg": {"max_depth": 5, "min_child_weight": 2}}, "buckets": {"full": {"log_loss": 0.2687879502773285, "brier": 0.07116907089948654, "auc": 0.8041393753580774, "pr_auc": 0.3358325530991202, "ece": 0.01492221937936812, "cal_in_large": 1.0313380726596766, "corr_vs_statsbomb": 0.8994229035846985, "delta_ll_vs_current": {"delta": 0.005864138669366608, "ci_lo": -0.0002267198286257479, "ci_hi": 0.01414748119443113}, "delta_brier_vs_current": {"delta": 0.00030057386568535163, "ci_lo": -0.00013705492154639202, "ci_hi": 0.0007739793150127412}}, "partial": {"log_loss": 0.2615588903427124, "brier": 0.07182846963405609, "auc": 0.7938115022220157, "pr_auc": 0.32017692211670845, "ece": 0.01222300332311448, "cal_in_large": 1.0192733898497464, "corr_vs_statsbomb": 0.9017105085481296, "delta_ll_vs_current": {"delta": 0.002059888020472998, "ci_lo": -0.001993564342090098, "ci_hi": 0.009031681090158297}, "delta_brier_vs_current": {"delta": -0.00015596331770359744, "ci_lo": -0.0006467538501872126, "ci_hi": 0.0003484034503864}}, "minimal": {"log_loss": 0.2674223482608795, "brier": 0.07477953284978867, "auc": 0.7693889263095958, "pr_auc": 0.26522015810804833, "ece": 0.005354406839384492, "cal_in_large": 1.0403965063262404, "corr_vs_statsbomb": 0.7962623393734174, "delta_ll_vs_current": {"delta": 2.1390485034885838e-05, "ci_lo": -0.0012931855240680508, "ci_hi": 0.0013737887245657487}, "delta_brier_vs_current": {"delta": -0.0001409685821988542, "ci_lo": -0.0005290958059135125, "ci_hi": 0.0002562131329367205}}}}, "rf_tuned": {"label": "Random forest (300 trees, grid-tuned on val)", "meta": {"tree_nodes": 433826, "fit_s": 42.7, "chosen_cfg": {"min_samples_leaf": 60, "max_features": 0.3}}, "buckets": {"full": {"log_loss": 0.2651600805879613, "brier": 0.07221486139920477, "auc": 0.7952007459624348, "pr_auc": 0.31107049181224705, "ece": 0.007183218884521933, "cal_in_large": 1.0286023001697464, "corr_vs_statsbomb": 0.8840361531577712, "delta_ll_vs_current": {"delta": 0.0021306121049869055, "ci_lo": -0.009053281441008445, "ci_hi": 0.012242477117927966}, "delta_brier_vs_current": {"delta": 0.0013463566184028402, "ci_lo": 0.0005484960103832546, "ci_hi": 0.0021360315017424076}}, "partial": {"log_loss": 0.2608397970294993, "brier": 0.0724973395924341, "auc": 0.7887662392963873, "pr_auc": 0.3055744655943372, "ece": 0.007392189182577042, "cal_in_large": 1.0210634362293893, "corr_vs_statsbomb": 0.8685486375790797, "delta_ll_vs_current": {"delta": 0.0012703199612394836, "ci_lo": -0.008930281631527544, "ci_hi": 0.011588297440428635}, "delta_brier_vs_current": {"delta": 0.000512904227142535, "ci_lo": -0.00014149907650050635, "ci_hi": 0.0011736364460605002}}, "minimal": {"log_loss": 0.26731551218611677, "brier": 0.07493881006463178, "auc": 0.759170653907496, "pr_auc": 0.2655542368632341, "ece": 0.00682954002912246, "cal_in_large": 1.0370529130440476, "corr_vs_statsbomb": 0.7684297995760979, "delta_ll_vs_current": {"delta": -0.00012068135798966582, "ci_lo": -0.006939614731700964, "ci_hi": 0.004527303121580039}, "delta_brier_vs_current": {"delta": 1.8310269969293488e-05, "ci_lo": -0.0006233384863986002, "ci_hi": 0.0007063582825426826}}}}}, "seed_noise_floor": {"lgbm_seedbag5": {"full": {"members": [0.26303, 0.26536, 0.26112, 0.26047, 0.26292], "mean": 0.26258, "sd": 0.00191, "range": 0.00489}, "partial": {"members": [0.25957, 0.25921, 0.25795, 0.25754, 0.25638], "mean": 0.25813, "sd": 0.00129, "range": 0.00319}, "minimal": {"members": [0.26744, 0.26705, 0.27, 0.2673, 0.26778], "mean": 0.26791, "sd": 0.0012, "range": 0.00296}}, "lgbm_matchbag5": {"full": {"members": [0.26065, 0.25929, 0.26499, 0.27097, 0.2698], "mean": 0.26514, "sd": 0.00525, "range": 0.01168}, "partial": {"members": [0.25561, 0.25809, 0.26044, 0.26139, 0.26598], "mean": 0.2603, "sd": 0.00388, "range": 0.01037}, "minimal": {"members": [0.26749, 0.26813, 0.26876, 0.26791, 0.26842], "mean": 0.26814, "sd": 0.00048, "range": 0.00127}}}, "ensemble_size_curves": {"lgbm_seedbag5": {"full": [0.26303, 0.26598, 0.26386, 0.26333, 0.26267], "partial": [0.25957, 0.25971, 0.2571, 0.25687, 0.25696], "minimal": [0.26744, 0.26742, 0.26768, 0.26765, 0.26746]}, "lgbm_matchbag5": {"full": [0.26065, 0.26047, 0.26866, 0.26303, 0.26305], "partial": [0.25561, 0.25509, 0.25562, 0.25774, 0.26006], "minimal": [0.26749, 0.26753, 0.26744, 0.26688, 0.26723]}}, "grids": {"lgbm_tuned": [{"cfg": {"num_leaves": 15, "max_depth": 4, "min_child_samples": 30}, "val_ll": 0.27164, "best_iteration": 443}, {"cfg": {"num_leaves": 15, "max_depth": 4, "min_child_samples": 60}, "val_ll": 0.26942, "best_iteration": 336}, {"cfg": {"num_leaves": 15, "max_depth": 4, "min_child_samples": 120}, "val_ll": 0.27047, "best_iteration": 284}, {"cfg": {"num_leaves": 15, "max_depth": 5, "min_child_samples": 30}, "val_ll": 0.26856, "best_iteration": 418}, {"cfg": {"num_leaves": 15, "max_depth": 5, "min_child_samples": 60}, "val_ll": 0.26795, "best_iteration": 438}, {"cfg": {"num_leaves": 15, "max_depth": 5, "min_child_samples": 120}, "val_ll": 0.27288, "best_iteration": 292}, {"cfg": {"num_leaves": 15, "max_depth": 6, "min_child_samples": 30}, "val_ll": 0.27013, "best_iteration": 347}, {"cfg": {"num_leaves": 15, "max_depth": 6, "min_child_samples": 60}, "val_ll": 0.26519, "best_iteration": 344}, {"cfg": {"num_leaves": 15, "max_depth": 6, "min_child_samples": 120}, "val_ll": 0.27192, "best_iteration": 355}, {"cfg": {"num_leaves": 31, "max_depth": 4, "min_child_samples": 30}, "val_ll": 0.27119, "best_iteration": 434}, {"cfg": {"num_leaves": 31, "max_depth": 4, "min_child_samples": 60}, "val_ll": 0.26699, "best_iteration": 433}, {"cfg": {"num_leaves": 31, "max_depth": 4, "min_child_samples": 120}, "val_ll": 0.27169, "best_iteration": 336}, {"cfg": {"num_leaves": 31, "max_depth": 5, "min_child_samples": 30}, "val_ll": 0.27001, "best_iteration": 331}, {"cfg": {"num_leaves": 31, "max_depth": 5, "min_child_samples": 60}, "val_ll": 0.27004, "best_iteration": 290}, {"cfg": {"num_leaves": 31, "max_depth": 5, "min_child_samples": 120}, "val_ll": 0.27138, "best_iteration": 290}, {"cfg": {"num_leaves": 31, "max_depth": 6, "min_child_samples": 30}, "val_ll": 0.26762, "best_iteration": 321}, {"cfg": {"num_leaves": 31, "max_depth": 6, "min_child_samples": 60}, "val_ll": 0.27049, "best_iteration": 306}, {"cfg": {"num_leaves": 31, "max_depth": 6, "min_child_samples": 120}, "val_ll": 0.27319, "best_iteration": 236}], "xgb_tuned": [{"cfg": {"max_depth": 4, "min_child_weight": 2}, "val_ll": 0.26674, "best_iteration": 394}, {"cfg": {"max_depth": 4, "min_child_weight": 5}, "val_ll": 0.26879, "best_iteration": 381}, {"cfg": {"max_depth": 4, "min_child_weight": 10}, "val_ll": 0.26993, "best_iteration": 381}, {"cfg": {"max_depth": 5, "min_child_weight": 2}, "val_ll": 0.26372, "best_iteration": 367}, {"cfg": {"max_depth": 5, "min_child_weight": 5}, "val_ll": 0.2682, "best_iteration": 365}, {"cfg": {"max_depth": 5, "min_child_weight": 10}, "val_ll": 0.26759, "best_iteration": 365}, {"cfg": {"max_depth": 6, "min_child_weight": 2}, "val_ll": 0.26732, "best_iteration": 222}, {"cfg": {"max_depth": 6, "min_child_weight": 5}, "val_ll": 0.26651, "best_iteration": 261}, {"cfg": {"max_depth": 6, "min_child_weight": 10}, "val_ll": 0.26608, "best_iteration": 225}], "rf_tuned": [{"cfg": {"min_samples_leaf": 25, "max_features": 0.3}, "val_ll": 0.27854, "tree_nodes": 854742}, {"cfg": {"min_samples_leaf": 25, "max_features": 0.6}, "val_ll": 0.27957, "tree_nodes": 803816}, {"cfg": {"min_samples_leaf": 60, "max_features": 0.3}, "val_ll": 0.27229, "tree_nodes": 433826}, {"cfg": {"min_samples_leaf": 60, "max_features": 0.6}, "val_ll": 0.27778, "tree_nodes": 420362}, {"cfg": {"min_samples_leaf": 120, "max_features": 0.3}, "val_ll": 0.27495, "tree_nodes": 238654}, {"cfg": {"min_samples_leaf": 120, "max_features": 0.6}, "val_ll": 0.27858, "tree_nodes": 236086}]}, "smoke": false, "total_seconds": 655.4, "followup": {"n_seeds": 10, "seeds": [17, 118, 219, 320, 421, 522, 623, 724, 825, 926], "configs": {"shipped": {}, "tuned": {"num_leaves": 15, "max_depth": 6, "min_child_samples": 60}}, "buckets": {"full": {"shipped": {"members": [0.26303, 0.26536, 0.26112, 0.26047, 0.26292, 0.26071, 0.26997, 0.26569, 0.26531, 0.2612], "mean": 0.26358, "sd": 0.00301}, "tuned": {"members": [0.25809, 0.25835, 0.26276, 0.26024, 0.25983, 0.25819, 0.26305, 0.26022, 0.26143, 0.26336], "mean": 0.26055, "sd": 0.00203}, "delta_mean_ll_tuned_minus_shipped": {"delta": -0.003025560450101321, "ci_lo": -0.005970496761510988, "ci_hi": -0.0006097366411903695}}, "partial": {"shipped": {"members": [0.25957, 0.25921, 0.25795, 0.25754, 0.25638, 0.26267, 0.25936, 0.25941, 0.26252, 0.26001], "mean": 0.25946, "sd": 0.00199}, "tuned": {"members": [0.2564, 0.25954, 0.25604, 0.26198, 0.25843, 0.26008, 0.25981, 0.26089, 0.25927, 0.26255], "mean": 0.2595, "sd": 0.00212}, "delta_mean_ll_tuned_minus_shipped": {"delta": 3.651280020604559e-05, "ci_lo": -0.0007904569333245928, "ci_hi": 0.0009533844734828789}}, "minimal": {"shipped": {"members": [0.26744, 0.26705, 0.27, 0.2673, 0.26778, 0.26752, 0.26645, 0.26731, 0.26745, 0.2671], "mean": 0.26754, "sd": 0.00094}, "tuned": {"members": [0.26771, 0.26732, 0.26927, 0.26973, 0.26702, 0.26747, 0.26763, 0.26914, 0.26755, 0.26719], "mean": 0.268, "sd": 0.00098}, "delta_mean_ll_tuned_minus_shipped": {"delta": 0.0004635719349302058, "ci_lo": -0.00038245495751979973, "ci_hi": 0.001650855654522615}}}}};
+const NS = "http://www.w3.org/2000/svg";
+const $ = (s, r = document) => r.querySelector(s);
+const C = D.candidates;
+const ORDER = ["lgbm_current", "lgbm_tuned", "lgbm_seedbag5", "lgbm_matchbag5", "xgb_tuned", "rf_tuned"];
+const NAME = {
+  lgbm_current: "LightGBM (shipped)", lgbm_tuned: "LightGBM, tuned",
+  lgbm_seedbag5: "LightGBM × 5 seeds", lgbm_matchbag5: "LightGBM × 5 match-bags",
+  xgb_tuned: "XGBoost, tuned", rf_tuned: "Random forest"
+};
+const CAND = ORDER.slice(1);
+const BUCKETS = ["full", "partial", "minimal"];
+const BLABEL = { full: "Full detail", partial: "Partial", minimal: "Minimal" };
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in (attrs || {})) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function text(parent, x, y, s, cls, anchor) {
+  const t = el("text", { x, y, class: cls || "t", "text-anchor": anchor || "start" }, parent);
+  t.textContent = s;
+  return t;
+}
+const f = (v, d = 4) => v.toFixed(d);
+const sg = (v, d = 4) => (v > 0 ? "+" : v < 0 ? "−" : "±") + Math.abs(v).toFixed(d);
+function verdict(d) { return d.ci_lo > 0 ? "worse" : d.ci_hi < 0 ? "better" : "same"; }
+const VLABEL = { better: "better", worse: "worse", same: "no clear difference" };
+const VCOL = { better: "var(--good)", worse: "var(--bad)", same: "var(--cand)" };
+function niceStep(range, target) {
+  const raw = range / target, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+  return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p;
+}
+function ticks(lo, hi, target) {
+  const st = niceStep(hi - lo, target), out = [];
+  for (let v = Math.ceil(lo / st) * st; v <= hi + st * 1e-9; v += st) out.push(Math.abs(v) < st * 1e-9 ? 0 : v);
+  return { out, st };
+}
+
+// ---- facts strip ---------------------------------------------------------------------
+$("#facts").innerHTML =
+  `<span><b>${D.test_shots.toLocaleString()}</b> test shots</span>` +
+  `<span><b>${D.test_goals}</b> goals</span>` +
+  `<span><b>${D.test_matches}</b> matches</span>` +
+  `<span><b>${ORDER.length}</b> models, <b>${Object.values(D.grids).reduce((a, g) => a + g.length, 0) + 1 + 2 * D.seed_noise_floor.lgbm_seedbag5.full.members.length + 2 * D.followup.n_seeds}</b> fits</span>`;
+$("#hdiff").textContent = D.harness.refit_vs_shipped_max_abs_diff.toExponential(1);
+
+// ---- scoreboard ---------------------------------------------------------------------
+const curNodes = C.lgbm_current.meta.tree_nodes;
+function renderScore(bucket) {
+  const rows = ORDER.map(n => {
+    const b = C[n].buckets[bucket], d = b.delta_ll_vs_current, ref = n === "lgbm_current";
+    const dcell = ref ? `<span class="ci">reference</span>` :
+      `${sg(d.delta)} <span class="ci">[${sg(d.ci_lo)}, ${sg(d.ci_hi)}]</span><span class="tag ${verdict(d)}">${VLABEL[verdict(d)]}</span>`;
+    const size = C[n].meta.tree_nodes / curNodes;
+    return `<tr class="${ref ? "ref" : ""}"><td>${NAME[n]}</td><td>${f(b.log_loss)}</td><td>${dcell}</td>` +
+      `<td>${f(b.brier)}</td><td>${f(b.auc)}</td><td>${f(b.cal_in_large, 3)}</td>` +
+      `<td>${size < 1.05 && size > .95 ? "1×" : size.toFixed(1) + "×"}</td><td>${C[n].meta.fit_s}s</td></tr>`;
+  }).join("");
+  $("#score").innerHTML =
+    `<thead><tr><th>Model</th><th>Log loss</th><th>Δ vs shipped</th><th>Brier</th><th>AUC</th><th>Cal.</th><th>Size*</th><th>Fit</th></tr></thead><tbody>${rows}</tbody>` +
+    `<caption style="caption-side:bottom;text-align:left;color:var(--ink2);font-size:12px;padding-top:10px">*Total tree nodes relative to the shipped model, a proxy for ONNX file size and inference work. Cal. = predicted goals ÷ actual goals (1.000 is perfect).</caption>`;
+  document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.b === bucket));
+}
+BUCKETS.forEach(b => {
+  const btn = document.createElement("button");
+  btn.type = "button"; btn.role = "tab"; btn.id = "tab-" + b; btn.dataset.b = b; btn.textContent = BLABEL[b];
+  btn.addEventListener("click", () => renderScore(b));
+  $("#tabs").appendChild(btn);
+});
+renderScore("full");
+
+// ---- forest plots (shared x scale across buckets) --------------------------------------
+(function () {
+  let lo = 0, hi = 0;
+  BUCKETS.forEach(b => CAND.forEach(n => {
+    const d = C[n].buckets[b].delta_ll_vs_current;
+    lo = Math.min(lo, d.ci_lo); hi = Math.max(hi, d.ci_hi);
+  }));
+  const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
+  const W = 640, L = 176, R = 24, T = 22, ROW = 34, Bm = 40;
+  const tk = ticks(lo, hi, 6);
+  BUCKETS.forEach(bk => {
+    const H = T + CAND.length * ROW + Bm;
+    const fig = document.createElement("figure");
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `Paired change in log loss vs shipped model, ${BLABEL[bk]} inputs` });
+    const x = v => L + (v - lo) / (hi - lo) * (W - L - R);
+    text(svg, 0, 12, BLABEL[bk] + " inputs", "tl");
+    tk.out.forEach(v => {
+      el("line", { x1: x(v), x2: x(v), y1: T, y2: H - Bm + 6, class: v === 0 ? "zero" : "grid" }, svg);
+      text(svg, x(v), H - Bm + 22, (v === 0 ? "0" : sg(v, 3)), "t", "middle");
+    });
+    text(svg, x(lo) - 0, H - 4, "← better", "t", "start");
+    text(svg, x(hi), H - 4, "worse →", "t", "end");
+    CAND.forEach((n, i) => {
+      const d = C[n].buckets[bk].delta_ll_vs_current, y = T + i * ROW + ROW / 2, col = VCOL[verdict(d)];
+      text(svg, L - 14, y + 4, NAME[n], "tl", "end");
+      el("line", { x1: x(d.ci_lo), x2: x(d.ci_hi), y1: y, y2: y, stroke: col, "stroke-width": 2.5, "stroke-linecap": "round" }, svg);
+      el("circle", { cx: x(d.delta), cy: y, r: 5, fill: col }, svg);
+      text(svg, x(d.delta), y - 10, sg(d.delta), "tv", "middle");
+    });
+    fig.appendChild(svg);
+    $("#forests").appendChild(fig);
+  });
+})();
+
+// ---- absolute dot plot with seed band -------------------------------------------------
+(function () {
+  const seeds = D.seed_noise_floor.lgbm_seedbag5.full.members;
+  const rows = [{ k: "seeds", label: "5 single LightGBM seeds" }].concat(ORDER.map(n => ({ k: n, label: NAME[n] })));
+  const vals = seeds.concat(ORDER.map(n => C[n].buckets.full.log_loss));
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const pad = (hi - lo) * 0.1; lo -= pad; hi += pad;
+  const W = 640, L = 176, R = 30, T = 14, ROW = 32, Bm = 44, H = T + rows.length * ROW + Bm;
+  const x = v => L + (v - lo) / (hi - lo) * (W - L - R);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Test log loss of each model against the spread of five single-model retrains" });
+  const smin = Math.min(...seeds), smax = Math.max(...seeds);
+  el("rect", { x: x(smin), y: T - 4, width: Math.max(2, x(smax) - x(smin)), height: rows.length * ROW + 4, fill: "var(--band)" }, svg);
+  const tk = ticks(lo, hi, 6);
+  tk.out.forEach(v => {
+    el("line", { x1: x(v), x2: x(v), y1: T, y2: H - Bm + 6, class: "grid" }, svg);
+    text(svg, x(v), H - Bm + 22, f(v, 3), "t", "middle");
+  });
+  text(svg, (L + W - R) / 2, H - 6, "full-input test log loss (lower is better)", "t", "middle");
+  const cur = C.lgbm_current.buckets.full.log_loss;
+  el("line", { x1: x(cur), x2: x(cur), y1: T - 4, y2: H - Bm + 6, stroke: "var(--ref)", "stroke-width": 1.5, "stroke-dasharray": "4 3" }, svg);
+  rows.forEach((r, i) => {
+    const y = T + i * ROW + ROW / 2;
+    text(svg, L - 14, y + 4, r.label, "tl", "end");
+    if (r.k === "seeds") {
+      seeds.forEach(v => el("circle", { cx: x(v), cy: y, r: 4.5, fill: "var(--bg)", stroke: "var(--ink2)", "stroke-width": 1.5 }, svg));
+    } else {
+      const v = C[r.k].buckets.full.log_loss, ref = r.k === "lgbm_current";
+      el("circle", { cx: x(v), cy: y, r: 5.5, fill: ref ? "var(--ref)" : "var(--cand)" }, svg);
+      text(svg, x(v), y - 11, f(v), "tv", "middle");
+    }
+  });
+  const fig = $("#dot");
+  fig.appendChild(svg);
+  const cap = document.createElement("figcaption");
+  cap.textContent = `Shaded band: the five single-model retrains span ${f(smin)} to ${f(smax)} (a range of ${f(smax - smin)}). Dashed line: the shipped model.`;
+  fig.appendChild(cap);
+})();
+
+// ---- ensemble-size curve --------------------------------------------------------------
+(function () {
+  const S = D.ensemble_size_curves, series = [["lgbm_seedbag5", "seed-averaged", "var(--ref)"], ["lgbm_matchbag5", "match-bootstrap bags", "var(--cand)"]];
+  const seeds = D.seed_noise_floor.lgbm_seedbag5.full.members, cur = C.lgbm_current.buckets.full.log_loss;
+  let all = seeds.concat(cur); series.forEach(s => all = all.concat(S[s[0]].full));
+  let lo = Math.min(...all), hi = Math.max(...all);
+  const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+  const W = 640, L = 62, R = 64, T = 16, H = 250, Bm = 44;
+  const n = S.lgbm_seedbag5.full.length;
+  const x = k => L + (k - 1) / (n - 1) * (W - L - R), y = v => T + (hi - v) / (hi - lo) * (H - T - Bm);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Full-input test log loss as ensemble size grows from 1 to 5 members" });
+  el("rect", { x: L, y: y(Math.max(...seeds)), width: W - L - R, height: Math.max(2, y(Math.min(...seeds)) - y(Math.max(...seeds))), fill: "var(--band)" }, svg);
+  ticks(lo, hi, 5).out.forEach(v => {
+    el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), class: "grid" }, svg);
+    text(svg, L - 8, y(v) + 4, f(v, 3), "t", "end");
+  });
+  for (let k = 1; k <= n; k++) text(svg, x(k), H - Bm + 20, String(k), "t", "middle");
+  text(svg, (L + W - R) / 2, H - 6, "models in the ensemble", "t", "middle");
+  el("line", { x1: L, x2: W - R, y1: y(cur), y2: y(cur), stroke: "var(--ink)", "stroke-width": 1.2, "stroke-dasharray": "5 4" }, svg);
+  text(svg, W - R + 8, y(cur) + 4, "shipped", "t");
+  series.forEach(([key, lab, col]) => {
+    const ys = S[key].full;
+    const d = ys.map((v, i) => (i ? "L" : "M") + x(i + 1) + " " + y(v)).join(" ");
+    el("path", { d, fill: "none", stroke: col, "stroke-width": 2.2 }, svg);
+    ys.forEach((v, i) => el("circle", { cx: x(i + 1), cy: y(v), r: 3.6, fill: col }, svg));
+  });
+  const fig = $("#curve");
+  const lg = document.createElement("div");
+  lg.className = "legend";
+  lg.innerHTML = series.map(([k, lab, col]) => `<span><i style="background:${col}"></i>${lab}</span>`).join("") +
+    `<span><i style="background:var(--band);border:1px solid var(--line)"></i>single-model seed spread</span>`;
+  fig.appendChild(lg);
+  fig.appendChild(svg);
+  const cap = document.createElement("figcaption");
+  cap.textContent = "Full-input test log loss for the first k members averaged and re-calibrated. The band is the single-model seed spread from the chart above.";
+  fig.appendChild(cap);
+})();
+
+// ---- follow-up: 10 seeds per config ---------------------------------------------------
+(function () {
+  const F = D.followup, fb = F.buckets;
+  const rows = [["shipped", "Shipped config (31 leaves, depth 5)"], ["tuned", "Tuned config (15 leaves, depth 6)"]];
+  const all = fb.full.shipped.members.concat(fb.full.tuned.members);
+  let lo = Math.min(...all), hi = Math.max(...all);
+  const pad = (hi - lo) * 0.1; lo -= pad; hi += pad;
+  const W = 640, L = 200, R = 30, T = 16, ROW = 46, Bm = 44, H = T + rows.length * ROW + Bm;
+  const x = v => L + (v - lo) / (hi - lo) * (W - L - R);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Full-input test log loss of ten seeds for each LightGBM configuration" });
+  ticks(lo, hi, 6).out.forEach(v => {
+    el("line", { x1: x(v), x2: x(v), y1: T, y2: H - Bm + 6, class: "grid" }, svg);
+    text(svg, x(v), H - Bm + 22, f(v, 3), "t", "middle");
+  });
+  text(svg, (L + W - R) / 2, H - 6, "full-input test log loss, one dot per seed (lower is better)", "t", "middle");
+  rows.forEach(([k, label], i) => {
+    const y = T + i * ROW + ROW / 2, m = fb.full[k], col = k === "tuned" ? "var(--ref)" : "var(--cand)";
+    text(svg, L - 14, y + 4, label, "tl", "end");
+    m.members.forEach(v => el("circle", { cx: x(v), cy: y, r: 4.5, fill: "var(--bg)", stroke: col, "stroke-width": 1.8 }, svg));
+    el("line", { x1: x(m.mean), x2: x(m.mean), y1: y - 15, y2: y + 15, stroke: col, "stroke-width": 3 }, svg);
+    text(svg, x(m.mean), y - 20, "mean " + f(m.mean), "tv", "middle");
+  });
+  const fig = $("#fu");
+  fig.appendChild(svg);
+  const cap = document.createElement("figcaption");
+  cap.textContent = "Hollow dots: individual seeds. Bar: the mean over 10 seeds. The two clouds overlap heavily, which is why one seed each proved nothing.";
+  fig.appendChild(cap);
+  const body = BUCKETS.map(b => {
+    const s = fb[b].shipped, t = fb[b].tuned, d = fb[b].delta_mean_ll_tuned_minus_shipped;
+    return `<tr><td>${BLABEL[b]}</td><td>${f(s.mean)} <span class="ci">± ${f(s.sd)}</span></td><td>${f(t.mean)} <span class="ci">± ${f(t.sd)}</span></td>` +
+      `<td>${sg(d.delta)} <span class="ci">[${sg(d.ci_lo)}, ${sg(d.ci_hi)}]</span><span class="tag ${verdict(d)}">${VLABEL[verdict(d)]}</span></td></tr>`;
+  }).join("");
+  $("#futbl").innerHTML = `<thead><tr><th>Inputs</th><th>Shipped, 10-seed mean</th><th>Tuned, 10-seed mean</th><th>Tuned − shipped</th></tr></thead><tbody>${body}</tbody>` +
+    `<caption style="caption-side:bottom;text-align:left;color:var(--ink2);font-size:12px;padding-top:10px">Mean test log loss ± standard deviation across seeds. Interval: 95%, paired bootstrap over test matches.</caption>`;
+})();
+
+// ---- grids ----------------------------------------------------------------------------
+const GNAME = { lgbm_tuned: "LightGBM", xgb_tuned: "XGBoost", rf_tuned: "Random forest" };
+Object.keys(D.grids).forEach(k => {
+  const rows = D.grids[k], best = Math.min(...rows.map(r => r.val_ll));
+  const keys = Object.keys(rows[0].cfg);
+  const det = document.createElement("details");
+  det.innerHTML = `<summary>${GNAME[k]} <span class="ci">— ${rows.length} configurations</span></summary>` +
+    `<div class="scroll"><table class="grid-tbl"><thead><tr>${keys.map(c => `<th>${c.replace(/_/g, " ")}</th>`).join("")}<th>val log loss</th></tr></thead><tbody>` +
+    rows.map(r => `<tr class="${r.val_ll === best ? "best" : ""}">${keys.map(c => `<td>${r.cfg[c]}</td>`).join("")}<td>${r.val_ll.toFixed(5)}${r.val_ll === best ? " ◂ chosen" : ""}</td></tr>`).join("") +
+    `</tbody></table></div>`;
+  $("#gridlist").appendChild(det);
+});
+</script>

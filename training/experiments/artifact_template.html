@@ -1,0 +1,385 @@
+<title>Boosting vs Bagging</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #f2f6f1;
+    --surface: #fafcf9;
+    --ink: #15221b;
+    --ink2: #4a5a50;
+    --line: #d0dad2;
+    --band: #dde8df;
+    --ref: #1d7a4c;
+    --cand: #365c86;
+    --good: #1d7a4c;
+    --bad: #b23b32;
+    --sans: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1410; --surface: #131c17; --ink: #e4eee7; --ink2: #9fb0a6;
+      --line: #26342b; --band: #1b2a21; --ref: #43c184; --cand: #86adda;
+      --good: #43c184; --bad: #ef7a6f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1410; --surface: #131c17; --ink: #e4eee7; --ink2: #9fb0a6;
+    --line: #26342b; --band: #1b2a21; --ref: #43c184; --cand: #86adda;
+    --good: #43c184; --bad: #ef7a6f;
+  }
+
+  body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); }
+  .wrap { max-width: 880px; margin: 0 auto; padding-inline: 20px; padding-block: 36px 64px; }
+  .eyebrow { font: 500 11.5px/1 var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--ink2); margin: 0 0 14px; }
+  h1 { font: 700 clamp(34px, 7vw, 54px)/1.02 var(--sans); letter-spacing: -.02em; margin: 0 0 18px; text-wrap: balance; }
+  h2 { font: 600 20px/1.25 var(--sans); letter-spacing: -.01em; margin: 0 0 6px; text-wrap: balance; }
+  .sub { color: var(--ink2); margin: 0 0 18px; max-width: 65ch; }
+  .lede { font-size: 18px; line-height: 1.5; max-width: 62ch; margin: 0 0 22px; text-wrap: pretty; }
+  section { margin-top: 52px; }
+  p { max-width: 65ch; margin: 0 0 12px; }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 26px; padding: 14px 0; border-block: 1px solid var(--line); font-size: 13px; color: var(--ink2); }
+  .facts b { color: var(--ink); font: 500 13px var(--mono); }
+
+  .findings { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+  .findings li { max-width: 68ch; padding-left: 16px; border-left: 2px solid var(--line); }
+  .findings li b { display: block; font-weight: 600; margin-bottom: 2px; }
+
+  .tabs { display: flex; gap: 6px; margin: 0 0 12px; flex-wrap: wrap; }
+  .tabs button { font: 500 13px var(--sans); color: var(--ink2); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  .tabs button[aria-selected="true"] { color: var(--bg); background: var(--ink); border-color: var(--ink); }
+  .tabs button:focus-visible { outline: 2px solid var(--cand); outline-offset: 2px; }
+
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th { text-align: right; font: 500 11px var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--ink2); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--ink); white-space: nowrap; }
+  td { text-align: right; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); font: 400 13px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; font-family: var(--sans); white-space: normal; min-width: 150px; padding-left: 0; }
+  td:first-child { font-size: 14px; font-weight: 500; }
+  tr.ref td:first-child { color: var(--ref); }
+  .ci { color: var(--ink2); font-size: 11.5px; }
+  .tag { display: inline-block; font: 500 10.5px var(--sans); padding: 2px 7px; border-radius: 99px; border: 1px solid currentColor; margin-left: 6px; }
+  .tag.better { color: var(--good); } .tag.worse { color: var(--bad); } .tag.same { color: var(--ink2); }
+
+  figure { margin: 0 0 26px; }
+  figcaption { font-size: 13px; color: var(--ink2); margin-top: 4px; max-width: 65ch; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  svg .t { fill: var(--ink2); font: 11px var(--mono); }
+  svg .tl { fill: var(--ink); font: 500 12.5px var(--sans); }
+  svg .tv { fill: var(--ink); font: 500 10.5px var(--mono); }
+  svg .axis { stroke: var(--line); stroke-width: 1; }
+  svg .grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 4; }
+  svg .zero { stroke: var(--ink); stroke-width: 1.5; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--ink2); margin: 0 0 10px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+
+  details { border-top: 1px solid var(--line); padding: 12px 0; }
+  details:last-of-type { border-bottom: 1px solid var(--line); }
+  summary { cursor: pointer; font-weight: 600; }
+  summary:focus-visible { outline: 2px solid var(--cand); outline-offset: 3px; }
+  .grid-tbl { margin-top: 12px; }
+  .grid-tbl tr.best td { color: var(--ref); font-weight: 500; }
+  code { font: 12.5px var(--mono); background: var(--band); padding: 1px 5px; border-radius: 4px; }
+  pre { font: 12.5px/1.6 var(--mono); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow-x: auto; margin: 10px 0 0; }
+  ul.plain { margin: 0 0 12px; padding-left: 18px; max-width: 65ch; }
+  ul.plain li { margin-bottom: 6px; }
+</style>
+
+<main class="wrap">
+  <p class="eyebrow">xG Match Companion · model experiment</p>
+  <h1>Boosting vs Bagging</h1>
+  <p class="lede">__LEDE__</p>
+
+  <div class="facts" id="facts"></div>
+
+  <section id="findings">
+    <h2>What we found</h2>
+    <ul class="findings">__FINDINGS__</ul>
+  </section>
+
+  <section id="scoreboard">
+    <h2>Scoreboard</h2>
+    <p class="sub">Each model scored on the same held-out test shots, after the same per-bucket isotonic calibration the shipped model uses. “Δ vs shipped” is paired: lower is better, and a difference only counts when its 95% interval excludes zero.</p>
+    <div class="tabs" role="tablist" aria-label="Input completeness" id="tabs"></div>
+    <div class="scroll"><table id="score"></table></div>
+  </section>
+
+  <section id="forest">
+    <h2>How far from the shipped model?</h2>
+    <p class="sub">Change in test log loss versus the shipped LightGBM, with a 95% interval from resampling whole matches (shots in one match are not independent). Green or red means the interval clears zero.</p>
+    <div id="forests"></div>
+  </section>
+
+  <section id="noise">
+    <h2>Is that more than luck?</h2>
+    <p class="sub">The reference for “noise” is the shipped model itself, retrained five times with only the random seed changed. The shaded band is how far a single retrain wanders.</p>
+    <figure id="dot"></figure>
+    <figure id="curve"></figure>
+  </section>
+
+  <section id="followup">
+    <h2>One follow-up: is the tuned LightGBM really better?</h2>
+    <p class="sub">In the first run the tuned model looked about 0.005 better, roughly the size of one model’s seed-to-seed range, so luck of the seed could explain it. Each configuration was retrained with 10 different seeds and compared on average.</p>
+    <figure id="fu"></figure>
+    <div class="scroll"><table id="futbl"></table></div>
+  </section>
+
+  <section id="grids">
+    <h2>Tuning grids</h2>
+    <p class="sub">Every configuration tried, scored on the validation set only (calibrators fit on the calibration split). The test set was not used to pick any configuration.</p>
+    <div id="gridlist"></div>
+  </section>
+
+  <section id="method">
+    <h2>How it was run</h2>
+    <ul class="plain">
+      <li><b>Same protocol as the shipped model.</b> Match-level split, the same augmented training set (feature-group dropout and jitter), the same early-stopping set, the same per-bucket isotonic calibration on calibration ∪ validation. The refit of the shipped configuration reproduces the shipped model exactly (maximum prediction difference <code id="hdiff"></code>, same best iteration).</li>
+      <li><b>Bagging, two ways.</b> Seed-averaging (five LightGBM models differing only in seed) and match-bootstrap bagging (five models, each trained on a resample of whole training matches). Probabilities are averaged, then calibrated as one model. A random forest is the classic bagging of deep trees.</li>
+      <li><b>Monotone constraints</b> (distance, angle, defenders, and so on) are kept for LightGBM and XGBoost. The random forest ran unconstrained: scikit-learn does not support monotone constraints together with missing values, and missing values are how this model represents “not entered”.</li>
+      <li><b>Uncertainty.</b> Paired cluster bootstrap, 4,000 resamples of the test matches.</li>
+      <li><b>Known limits.</b> The validation set that picks each grid winner is also the set the boosted models early-stop on, which flatters all boosted models a little (the forest has no early stopping). The test set was looked at twice: once for the six-model comparison and once for the 10-seed follow-up on the config that grid picked. One split, one test set of 456 goals.</li>
+      <li><b>Not tried:</b> CatBoost, stacking, feature changes, tuning beyond the small grids above, and a second random split.</li>
+    </ul>
+    <pre>cd training
+.venv/bin/pip install -r requirements-experiments.txt
+.venv/bin/python experiments/model_comparison.py
+.venv/bin/python experiments/plot_results.py</pre>
+  </section>
+</main>
+
+<script>
+const D = __DATA__;
+const NS = "http://www.w3.org/2000/svg";
+const $ = (s, r = document) => r.querySelector(s);
+const C = D.candidates;
+const ORDER = ["lgbm_current", "lgbm_tuned", "lgbm_seedbag5", "lgbm_matchbag5", "xgb_tuned", "rf_tuned"];
+const NAME = {
+  lgbm_current: "LightGBM (shipped)", lgbm_tuned: "LightGBM, tuned",
+  lgbm_seedbag5: "LightGBM × 5 seeds", lgbm_matchbag5: "LightGBM × 5 match-bags",
+  xgb_tuned: "XGBoost, tuned", rf_tuned: "Random forest"
+};
+const CAND = ORDER.slice(1);
+const BUCKETS = ["full", "partial", "minimal"];
+const BLABEL = { full: "Full detail", partial: "Partial", minimal: "Minimal" };
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in (attrs || {})) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function text(parent, x, y, s, cls, anchor) {
+  const t = el("text", { x, y, class: cls || "t", "text-anchor": anchor || "start" }, parent);
+  t.textContent = s;
+  return t;
+}
+const f = (v, d = 4) => v.toFixed(d);
+const sg = (v, d = 4) => (v > 0 ? "+" : v < 0 ? "−" : "±") + Math.abs(v).toFixed(d);
+function verdict(d) { return d.ci_lo > 0 ? "worse" : d.ci_hi < 0 ? "better" : "same"; }
+const VLABEL = { better: "better", worse: "worse", same: "no clear difference" };
+const VCOL = { better: "var(--good)", worse: "var(--bad)", same: "var(--cand)" };
+function niceStep(range, target) {
+  const raw = range / target, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+  return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p;
+}
+function ticks(lo, hi, target) {
+  const st = niceStep(hi - lo, target), out = [];
+  for (let v = Math.ceil(lo / st) * st; v <= hi + st * 1e-9; v += st) out.push(Math.abs(v) < st * 1e-9 ? 0 : v);
+  return { out, st };
+}
+
+// ---- facts strip ---------------------------------------------------------------------
+$("#facts").innerHTML =
+  `<span><b>${D.test_shots.toLocaleString()}</b> test shots</span>` +
+  `<span><b>${D.test_goals}</b> goals</span>` +
+  `<span><b>${D.test_matches}</b> matches</span>` +
+  `<span><b>${ORDER.length}</b> models, <b>${Object.values(D.grids).reduce((a, g) => a + g.length, 0) + 1 + 2 * D.seed_noise_floor.lgbm_seedbag5.full.members.length + 2 * D.followup.n_seeds}</b> fits</span>`;
+$("#hdiff").textContent = D.harness.refit_vs_shipped_max_abs_diff.toExponential(1);
+
+// ---- scoreboard ---------------------------------------------------------------------
+const curNodes = C.lgbm_current.meta.tree_nodes;
+function renderScore(bucket) {
+  const rows = ORDER.map(n => {
+    const b = C[n].buckets[bucket], d = b.delta_ll_vs_current, ref = n === "lgbm_current";
+    const dcell = ref ? `<span class="ci">reference</span>` :
+      `${sg(d.delta)} <span class="ci">[${sg(d.ci_lo)}, ${sg(d.ci_hi)}]</span><span class="tag ${verdict(d)}">${VLABEL[verdict(d)]}</span>`;
+    const size = C[n].meta.tree_nodes / curNodes;
+    return `<tr class="${ref ? "ref" : ""}"><td>${NAME[n]}</td><td>${f(b.log_loss)}</td><td>${dcell}</td>` +
+      `<td>${f(b.brier)}</td><td>${f(b.auc)}</td><td>${f(b.cal_in_large, 3)}</td>` +
+      `<td>${size < 1.05 && size > .95 ? "1×" : size.toFixed(1) + "×"}</td><td>${C[n].meta.fit_s}s</td></tr>`;
+  }).join("");
+  $("#score").innerHTML =
+    `<thead><tr><th>Model</th><th>Log loss</th><th>Δ vs shipped</th><th>Brier</th><th>AUC</th><th>Cal.</th><th>Size*</th><th>Fit</th></tr></thead><tbody>${rows}</tbody>` +
+    `<caption style="caption-side:bottom;text-align:left;color:var(--ink2);font-size:12px;padding-top:10px">*Total tree nodes relative to the shipped model, a proxy for ONNX file size and inference work. Cal. = predicted goals ÷ actual goals (1.000 is perfect).</caption>`;
+  document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.b === bucket));
+}
+BUCKETS.forEach(b => {
+  const btn = document.createElement("button");
+  btn.type = "button"; btn.role = "tab"; btn.id = "tab-" + b; btn.dataset.b = b; btn.textContent = BLABEL[b];
+  btn.addEventListener("click", () => renderScore(b));
+  $("#tabs").appendChild(btn);
+});
+renderScore("full");
+
+// ---- forest plots (shared x scale across buckets) --------------------------------------
+(function () {
+  let lo = 0, hi = 0;
+  BUCKETS.forEach(b => CAND.forEach(n => {
+    const d = C[n].buckets[b].delta_ll_vs_current;
+    lo = Math.min(lo, d.ci_lo); hi = Math.max(hi, d.ci_hi);
+  }));
+  const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
+  const W = 640, L = 176, R = 24, T = 22, ROW = 34, Bm = 40;
+  const tk = ticks(lo, hi, 6);
+  BUCKETS.forEach(bk => {
+    const H = T + CAND.length * ROW + Bm;
+    const fig = document.createElement("figure");
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `Paired change in log loss vs shipped model, ${BLABEL[bk]} inputs` });
+    const x = v => L + (v - lo) / (hi - lo) * (W - L - R);
+    text(svg, 0, 12, BLABEL[bk] + " inputs", "tl");
+    tk.out.forEach(v => {
+      el("line", { x1: x(v), x2: x(v), y1: T, y2: H - Bm + 6, class: v === 0 ? "zero" : "grid" }, svg);
+      text(svg, x(v), H - Bm + 22, (v === 0 ? "0" : sg(v, 3)), "t", "middle");
+    });
+    text(svg, x(lo) - 0, H - 4, "← better", "t", "start");
+    text(svg, x(hi), H - 4, "worse →", "t", "end");
+    CAND.forEach((n, i) => {
+      const d = C[n].buckets[bk].delta_ll_vs_current, y = T + i * ROW + ROW / 2, col = VCOL[verdict(d)];
+      text(svg, L - 14, y + 4, NAME[n], "tl", "end");
+      el("line", { x1: x(d.ci_lo), x2: x(d.ci_hi), y1: y, y2: y, stroke: col, "stroke-width": 2.5, "stroke-linecap": "round" }, svg);
+      el("circle", { cx: x(d.delta), cy: y, r: 5, fill: col }, svg);
+      text(svg, x(d.delta), y - 10, sg(d.delta), "tv", "middle");
+    });
+    fig.appendChild(svg);
+    $("#forests").appendChild(fig);
+  });
+})();
+
+// ---- absolute dot plot with seed band -------------------------------------------------
+(function () {
+  const seeds = D.seed_noise_floor.lgbm_seedbag5.full.members;
+  const rows = [{ k: "seeds", label: "5 single LightGBM seeds" }].concat(ORDER.map(n => ({ k: n, label: NAME[n] })));
+  const vals = seeds.concat(ORDER.map(n => C[n].buckets.full.log_loss));
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const pad = (hi - lo) * 0.1; lo -= pad; hi += pad;
+  const W = 640, L = 176, R = 30, T = 14, ROW = 32, Bm = 44, H = T + rows.length * ROW + Bm;
+  const x = v => L + (v - lo) / (hi - lo) * (W - L - R);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Test log loss of each model against the spread of five single-model retrains" });
+  const smin = Math.min(...seeds), smax = Math.max(...seeds);
+  el("rect", { x: x(smin), y: T - 4, width: Math.max(2, x(smax) - x(smin)), height: rows.length * ROW + 4, fill: "var(--band)" }, svg);
+  const tk = ticks(lo, hi, 6);
+  tk.out.forEach(v => {
+    el("line", { x1: x(v), x2: x(v), y1: T, y2: H - Bm + 6, class: "grid" }, svg);
+    text(svg, x(v), H - Bm + 22, f(v, 3), "t", "middle");
+  });
+  text(svg, (L + W - R) / 2, H - 6, "full-input test log loss (lower is better)", "t", "middle");
+  const cur = C.lgbm_current.buckets.full.log_loss;
+  el("line", { x1: x(cur), x2: x(cur), y1: T - 4, y2: H - Bm + 6, stroke: "var(--ref)", "stroke-width": 1.5, "stroke-dasharray": "4 3" }, svg);
+  rows.forEach((r, i) => {
+    const y = T + i * ROW + ROW / 2;
+    text(svg, L - 14, y + 4, r.label, "tl", "end");
+    if (r.k === "seeds") {
+      seeds.forEach(v => el("circle", { cx: x(v), cy: y, r: 4.5, fill: "var(--bg)", stroke: "var(--ink2)", "stroke-width": 1.5 }, svg));
+    } else {
+      const v = C[r.k].buckets.full.log_loss, ref = r.k === "lgbm_current";
+      el("circle", { cx: x(v), cy: y, r: 5.5, fill: ref ? "var(--ref)" : "var(--cand)" }, svg);
+      text(svg, x(v), y - 11, f(v), "tv", "middle");
+    }
+  });
+  const fig = $("#dot");
+  fig.appendChild(svg);
+  const cap = document.createElement("figcaption");
+  cap.textContent = `Shaded band: the five single-model retrains span ${f(smin)} to ${f(smax)} (a range of ${f(smax - smin)}). Dashed line: the shipped model.`;
+  fig.appendChild(cap);
+})();
+
+// ---- ensemble-size curve --------------------------------------------------------------
+(function () {
+  const S = D.ensemble_size_curves, series = [["lgbm_seedbag5", "seed-averaged", "var(--ref)"], ["lgbm_matchbag5", "match-bootstrap bags", "var(--cand)"]];
+  const seeds = D.seed_noise_floor.lgbm_seedbag5.full.members, cur = C.lgbm_current.buckets.full.log_loss;
+  let all = seeds.concat(cur); series.forEach(s => all = all.concat(S[s[0]].full));
+  let lo = Math.min(...all), hi = Math.max(...all);
+  const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+  const W = 640, L = 62, R = 64, T = 16, H = 250, Bm = 44;
+  const n = S.lgbm_seedbag5.full.length;
+  const x = k => L + (k - 1) / (n - 1) * (W - L - R), y = v => T + (hi - v) / (hi - lo) * (H - T - Bm);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Full-input test log loss as ensemble size grows from 1 to 5 members" });
+  el("rect", { x: L, y: y(Math.max(...seeds)), width: W - L - R, height: Math.max(2, y(Math.min(...seeds)) - y(Math.max(...seeds))), fill: "var(--band)" }, svg);
+  ticks(lo, hi, 5).out.forEach(v => {
+    el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), class: "grid" }, svg);
+    text(svg, L - 8, y(v) + 4, f(v, 3), "t", "end");
+  });
+  for (let k = 1; k <= n; k++) text(svg, x(k), H - Bm + 20, String(k), "t", "middle");
+  text(svg, (L + W - R) / 2, H - 6, "models in the ensemble", "t", "middle");
+  el("line", { x1: L, x2: W - R, y1: y(cur), y2: y(cur), stroke: "var(--ink)", "stroke-width": 1.2, "stroke-dasharray": "5 4" }, svg);
+  text(svg, W - R + 8, y(cur) + 4, "shipped", "t");
+  series.forEach(([key, lab, col]) => {
+    const ys = S[key].full;
+    const d = ys.map((v, i) => (i ? "L" : "M") + x(i + 1) + " " + y(v)).join(" ");
+    el("path", { d, fill: "none", stroke: col, "stroke-width": 2.2 }, svg);
+    ys.forEach((v, i) => el("circle", { cx: x(i + 1), cy: y(v), r: 3.6, fill: col }, svg));
+  });
+  const fig = $("#curve");
+  const lg = document.createElement("div");
+  lg.className = "legend";
+  lg.innerHTML = series.map(([k, lab, col]) => `<span><i style="background:${col}"></i>${lab}</span>`).join("") +
+    `<span><i style="background:var(--band);border:1px solid var(--line)"></i>single-model seed spread</span>`;
+  fig.appendChild(lg);
+  fig.appendChild(svg);
+  const cap = document.createElement("figcaption");
+  cap.textContent = "Full-input test log loss for the first k members averaged and re-calibrated. The band is the single-model seed spread from the chart above.";
+  fig.appendChild(cap);
+})();
+
+// ---- follow-up: 10 seeds per config ---------------------------------------------------
+(function () {
+  const F = D.followup, fb = F.buckets;
+  const rows = [["shipped", "Shipped config (31 leaves, depth 5)"], ["tuned", "Tuned config (15 leaves, depth 6)"]];
+  const all = fb.full.shipped.members.concat(fb.full.tuned.members);
+  let lo = Math.min(...all), hi = Math.max(...all);
+  const pad = (hi - lo) * 0.1; lo -= pad; hi += pad;
+  const W = 640, L = 200, R = 30, T = 16, ROW = 46, Bm = 44, H = T + rows.length * ROW + Bm;
+  const x = v => L + (v - lo) / (hi - lo) * (W - L - R);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Full-input test log loss of ten seeds for each LightGBM configuration" });
+  ticks(lo, hi, 6).out.forEach(v => {
+    el("line", { x1: x(v), x2: x(v), y1: T, y2: H - Bm + 6, class: "grid" }, svg);
+    text(svg, x(v), H - Bm + 22, f(v, 3), "t", "middle");
+  });
+  text(svg, (L + W - R) / 2, H - 6, "full-input test log loss, one dot per seed (lower is better)", "t", "middle");
+  rows.forEach(([k, label], i) => {
+    const y = T + i * ROW + ROW / 2, m = fb.full[k], col = k === "tuned" ? "var(--ref)" : "var(--cand)";
+    text(svg, L - 14, y + 4, label, "tl", "end");
+    m.members.forEach(v => el("circle", { cx: x(v), cy: y, r: 4.5, fill: "var(--bg)", stroke: col, "stroke-width": 1.8 }, svg));
+    el("line", { x1: x(m.mean), x2: x(m.mean), y1: y - 15, y2: y + 15, stroke: col, "stroke-width": 3 }, svg);
+    text(svg, x(m.mean), y - 20, "mean " + f(m.mean), "tv", "middle");
+  });
+  const fig = $("#fu");
+  fig.appendChild(svg);
+  const cap = document.createElement("figcaption");
+  cap.textContent = "Hollow dots: individual seeds. Bar: the mean over 10 seeds. The two clouds overlap heavily, which is why one seed each proved nothing.";
+  fig.appendChild(cap);
+  const body = BUCKETS.map(b => {
+    const s = fb[b].shipped, t = fb[b].tuned, d = fb[b].delta_mean_ll_tuned_minus_shipped;
+    return `<tr><td>${BLABEL[b]}</td><td>${f(s.mean)} <span class="ci">± ${f(s.sd)}</span></td><td>${f(t.mean)} <span class="ci">± ${f(t.sd)}</span></td>` +
+      `<td>${sg(d.delta)} <span class="ci">[${sg(d.ci_lo)}, ${sg(d.ci_hi)}]</span><span class="tag ${verdict(d)}">${VLABEL[verdict(d)]}</span></td></tr>`;
+  }).join("");
+  $("#futbl").innerHTML = `<thead><tr><th>Inputs</th><th>Shipped, 10-seed mean</th><th>Tuned, 10-seed mean</th><th>Tuned − shipped</th></tr></thead><tbody>${body}</tbody>` +
+    `<caption style="caption-side:bottom;text-align:left;color:var(--ink2);font-size:12px;padding-top:10px">Mean test log loss ± standard deviation across seeds. Interval: 95%, paired bootstrap over test matches.</caption>`;
+})();
+
+// ---- grids ----------------------------------------------------------------------------
+const GNAME = { lgbm_tuned: "LightGBM", xgb_tuned: "XGBoost", rf_tuned: "Random forest" };
+Object.keys(D.grids).forEach(k => {
+  const rows = D.grids[k], best = Math.min(...rows.map(r => r.val_ll));
+  const keys = Object.keys(rows[0].cfg);
+  const det = document.createElement("details");
+  det.innerHTML = `<summary>${GNAME[k]} <span class="ci">— ${rows.length} configurations</span></summary>` +
+    `<div class="scroll"><table class="grid-tbl"><thead><tr>${keys.map(c => `<th>${c.replace(/_/g, " ")}</th>`).join("")}<th>val log loss</th></tr></thead><tbody>` +
+    rows.map(r => `<tr class="${r.val_ll === best ? "best" : ""}">${keys.map(c => `<td>${r.cfg[c]}</td>`).join("")}<td>${r.val_ll.toFixed(5)}${r.val_ll === best ? " ◂ chosen" : ""}</td></tr>`).join("") +
+    `</tbody></table></div>`;
+  $("#gridlist").appendChild(det);
+});
+</script>

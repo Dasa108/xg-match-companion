@@ -1,0 +1,29 @@
+{
+  "lede": "We put bagging, XGBoost, a random forest and a tuned LightGBM up against the shipped model on 4,988 held-out shots. None clearly beats it. The one real gain is about 0.003 in log loss, on full-detail inputs only.",
+  "findings": [
+    {
+      "h": "Bagging did not help.",
+      "p": "The model is already gradient boosting, and each tree already sees a random 80% of shots and features. Averaging five LightGBM models scored 0.2627 against 0.2630 shipped, no better than the average single model (0.2626). Bagging by resampling whole matches scored 0.2631 with a clearly worse Brier score (+0.0007)."
+    },
+    {
+      "h": "XGBoost and a random forest were no better, and the forest is far heavier.",
+      "p": "XGBoost scored 0.2688 (+0.0059 vs shipped, interval −0.0002 to +0.0142) with a slightly lower AUC (0.8041 vs 0.8051). The random forest scored 0.2652, a clearly worse Brier score, a weaker match to StatsBomb’s own xG (0.884 vs 0.905), and 38 times as many tree nodes (433,826 vs 11,536), which would swell the offline download."
+    },
+    {
+      "h": "Most gaps are smaller than re-rolling the random seed.",
+      "p": "Retraining the shipped configuration with ten different seeds moves full-input log loss by a standard deviation of 0.0030 and a spread of 0.0095. Every full-input difference in the first comparison is smaller than that spread."
+    },
+    {
+      "h": "The one real signal: a tuned LightGBM, about 0.003 better.",
+      "p": "The grid picked 15 leaves and depth 6 (shipped: 31 leaves, depth 5). Averaged over ten seeds each it scored 0.2606 vs 0.2636 on full inputs, 0.0030 better, interval −0.0060 to −0.0006. On partial and minimal inputs it made no difference. The single-seed comparison had shown −0.0049, so part of that was luck. It is also 14% smaller."
+    },
+    {
+      "h": "With minimal input, the algorithm does not matter.",
+      "p": "All six models land within 0.0005 of each other (0.2672 to 0.2677). That ceiling comes from how little the operator entered, not from which tree method reads it."
+    },
+    {
+      "h": "Recommendation: keep the shipped model for now.",
+      "p": "A 1% log-loss gain in one input level does not justify retraining, since every xG number would shift slightly and the ONNX file, calibrators and parity fixtures would all be regenerated. If the model is retrained anyway, for example with more data, adopt the tuned configuration then and judge changes with multi-seed comparisons like this one."
+    }
+  ]
+}

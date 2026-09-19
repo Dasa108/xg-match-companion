@@ -216,6 +216,12 @@ pre-shot model itself, recalibrated, for post-shot) at every completeness level 
 partial / full detail entered), and both passed their release gate. Full numbers in
 `models/metrics.md` and `models/psxg_metrics.md`.
 
+The algorithm choice was also stress-tested: bagged LightGBM, XGBoost and a random forest
+were compared against the shipped model, and none clearly beats it (the one small real gain,
+a tuned LightGBM about 0.003 better in log loss on full-detail inputs, was not worth
+regenerating the model artifacts for). Details in
+[`training/experiments/REPORT.md`](training/experiments/REPORT.md).
+
 ---
 
 ## Project layout

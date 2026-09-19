@@ -1,0 +1,70 @@
+preparing data …
+  train_aug (108545, 58)  es (10809, 58)  test shots 4,988  test matches 197
+
+[1] lgbm_current (refit) …
+  best_iter=290 fit=7.6s  max|refit − shipped| raw prob (test/full) = 0.00e+00
+
+[2] lgbm grid …
+  {'num_leaves': 15, 'max_depth': 4, 'min_child_samples': 30}  val_ll=0.27164  it=443
+  {'num_leaves': 15, 'max_depth': 4, 'min_child_samples': 60}  val_ll=0.26942  it=336
+  {'num_leaves': 15, 'max_depth': 4, 'min_child_samples': 120}  val_ll=0.27047  it=284
+  {'num_leaves': 15, 'max_depth': 5, 'min_child_samples': 30}  val_ll=0.26856  it=418
+  {'num_leaves': 15, 'max_depth': 5, 'min_child_samples': 60}  val_ll=0.26795  it=438
+  {'num_leaves': 15, 'max_depth': 5, 'min_child_samples': 120}  val_ll=0.27288  it=292
+  {'num_leaves': 15, 'max_depth': 6, 'min_child_samples': 30}  val_ll=0.27013  it=347
+  {'num_leaves': 15, 'max_depth': 6, 'min_child_samples': 60}  val_ll=0.26519  it=344
+  {'num_leaves': 15, 'max_depth': 6, 'min_child_samples': 120}  val_ll=0.27192  it=355
+  {'num_leaves': 31, 'max_depth': 4, 'min_child_samples': 30}  val_ll=0.27119  it=434
+  {'num_leaves': 31, 'max_depth': 4, 'min_child_samples': 60}  val_ll=0.26699  it=433
+  {'num_leaves': 31, 'max_depth': 4, 'min_child_samples': 120}  val_ll=0.27169  it=336
+  {'num_leaves': 31, 'max_depth': 5, 'min_child_samples': 30}  val_ll=0.27001  it=331
+  {'num_leaves': 31, 'max_depth': 5, 'min_child_samples': 60}  val_ll=0.27004  it=290
+  {'num_leaves': 31, 'max_depth': 5, 'min_child_samples': 120}  val_ll=0.27138  it=290
+  {'num_leaves': 31, 'max_depth': 6, 'min_child_samples': 30}  val_ll=0.26762  it=321
+  {'num_leaves': 31, 'max_depth': 6, 'min_child_samples': 60}  val_ll=0.27049  it=306
+  {'num_leaves': 31, 'max_depth': 6, 'min_child_samples': 120}  val_ll=0.27319  it=236
+
+[3] lgbm_seedbag5 …
+  seed 17: it=290  fit=4.5s
+  seed 118: it=256  fit=3.9s
+  seed 219: it=241  fit=3.9s
+  seed 320: it=280  fit=4.6s
+  seed 421: it=264  fit=4.1s
+
+[3b] lgbm_matchbag5 …
+  member 0: it=296  fit=4.7s
+  member 1: it=165  fit=3.5s
+  member 2: it=238  fit=4.5s
+  member 3: it=191  fit=3.6s
+  member 4: it=230  fit=4.0s
+
+[4] xgboost grid …
+  {'max_depth': 4, 'min_child_weight': 2}  val_ll=0.26674  it=394
+  {'max_depth': 4, 'min_child_weight': 5}  val_ll=0.26879  it=381
+  {'max_depth': 4, 'min_child_weight': 10}  val_ll=0.26993  it=381
+  {'max_depth': 5, 'min_child_weight': 2}  val_ll=0.26372  it=367
+  {'max_depth': 5, 'min_child_weight': 5}  val_ll=0.26820  it=365
+  {'max_depth': 5, 'min_child_weight': 10}  val_ll=0.26759  it=365
+  {'max_depth': 6, 'min_child_weight': 2}  val_ll=0.26732  it=222
+  {'max_depth': 6, 'min_child_weight': 5}  val_ll=0.26651  it=261
+  {'max_depth': 6, 'min_child_weight': 10}  val_ll=0.26608  it=225
+
+[5] random forest grid …
+  {'min_samples_leaf': 25, 'max_features': 0.3}  val_ll=0.27854  nodes=854,742  fit=46.3s
+  {'min_samples_leaf': 25, 'max_features': 0.6}  val_ll=0.27957  nodes=803,816  fit=91.8s
+  {'min_samples_leaf': 60, 'max_features': 0.3}  val_ll=0.27229  nodes=433,826  fit=42.7s
+  {'min_samples_leaf': 60, 'max_features': 0.6}  val_ll=0.27778  nodes=420,362  fit=73.9s
+  {'min_samples_leaf': 120, 'max_features': 0.3}  val_ll=0.27495  nodes=238,654  fit=41.0s
+  {'min_samples_leaf': 120, 'max_features': 0.6}  val_ll=0.27858  nodes=236,086  fit=77.1s
+
+[6] test evaluation + paired cluster bootstrap …
+
+wrote /home/soulsin/Desktop/AIDS/xG/training/experiments/results/model_comparison.json  (total 655.4s)
+
+FULL-bucket test log loss:
+  lgbm_current     ll=0.26303 auc=0.8051 cal=1.033
+  lgbm_tuned       ll=0.25809 auc=0.8065 cal=1.028  Δ=-0.00494 [-0.01202,+0.00014]
+  lgbm_seedbag5    ll=0.26267 auc=0.8045 cal=1.033  Δ=-0.00036 [-0.00132,+0.00057]
+  lgbm_matchbag5   ll=0.26305 auc=0.8020 cal=1.036  Δ=+0.00002 [-0.00855,+0.00809]
+  xgb_tuned        ll=0.26879 auc=0.8041 cal=1.031  Δ=+0.00586 [-0.00023,+0.01415]
+  rf_tuned         ll=0.26516 auc=0.7952 cal=1.029  Δ=+0.00213 [-0.00905,+0.01224]

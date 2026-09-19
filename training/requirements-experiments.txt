@@ -1,0 +1,3 @@
+# Extra dependency for training/experiments/model_comparison.py only.
+# The shipped model pipeline (requirements.lock.txt) does not need it.
+xgboost==3.4.1

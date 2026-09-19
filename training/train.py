@@ -3,7 +3,8 @@ train.py — fit the xG model.
 
 Pipeline
 --------
-1. Load shots.parquet, assign train/val/test by held-out competition-season.
+1. Load shots.parquet, assign train/val/calib/test by a deterministic hash of match_id
+   (match-level split — see datasplit.py and process.md 1.5).
 2. Logistic-regression baselines (the bar every model must beat).
 3. LightGBM on an augmented training set (feature-group dropout + position jitter) with
    monotone constraints, early stopping on a matching augmented validation set.
