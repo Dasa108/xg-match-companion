@@ -1917,3 +1917,41 @@ shouldn't precede the data it describes. Known limits of the experiment itself: 
 validation set that picks grid winners is also the boosted models' early-stopping set
 (flatters boosters slightly), the test set was looked at twice, and it's one split with 456
 test goals. Not tried: CatBoost, stacking, feature changes.
+
+### 7.2 Node 20 is deprecated — moved CI, docs and local to Node 24
+
+**What.** "Check if we are running Node 20; it is deprecated, use 24." It was in three
+places: the CI build (`node-version: 20`), the README ("Node 18+"), and the local machine
+(v20.20.2 via nvm). Separately, every deploy carried a warning that the *actions themselves*
+(checkout, setup-node, configure-pages, deploy-pages…) target Node 20 and were being
+force-run on Node 24 — a different thing from the Node the build uses, and fixed by different
+means.
+
+**How.** Two independent changes, both needed:
+1. *The Node the build runs on:* `node-version: 24` in `deploy-pages.yml`, `.nvmrc` = 24,
+   README updated.
+2. *The Node the actions run on:* each action moved to a release whose own `action.yml`
+   declares `using: node24` — looked up per action rather than assumed: checkout v4→v7,
+   setup-node v4→v7, configure-pages v5→v6, deploy-pages v4→v5, and upload-pages-artifact
+   v3→v5 (a composite action; its inner `upload-artifact` is v7). Release notes were read for
+   input changes that could break this workflow; none did.
+
+**Verified before pushing.** Installed Node 24.21.0 next to 20 with nvm and ran typecheck, all
+593 tests and the production build under it — green, no lockfile changes. Then pushed and
+watched the real deploy: the runner log shows `node: v24.20.0`, build and deploy both
+passed, the live site returned 200, and the "Node.js 20 is deprecated" annotations were gone.
+
+**Decisions.** No `engines` field in `package.json`: it would have to be mirrored in
+`package-lock.json`, and npm 11 (Node 24) vs npm 10 (Node 20) write slightly different
+lockfiles — churn for a field that only warns. `.nvmrc` + README + CI carry the requirement
+instead. The nvm *default* was left on 20 (a machine-wide setting, the user's to change).
+
+**Learn.** "Deprecated Node" in a GitHub Actions warning and "the Node my app builds with" are
+two separate versions that happen to share a name; bumping only `node-version` would have left
+the warning in place. Also: verify a runtime upgrade by running the real suite under the new
+runtime *and* by reading the runner's own log for the version it actually used, not just by
+seeing the config say 24.
+
+**Heads-up found while checking.** The runner now warns that `ubuntu-latest` migrates to Ubuntu
+26 on 2026-10-19. Not acted on (nothing is broken); pinning `ubuntu-24.04` is the cheap option
+if a surprise there is unwanted.
