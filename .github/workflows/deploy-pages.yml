@@ -23,14 +23,17 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+# Node 24 for the build, and every action pinned to a release that itself runs on Node 24
+# (Node 20 is deprecated on GitHub-hosted runners; the old majors were being force-run on 24
+# with a warning on every deploy). Keep app/ tested on the same version: see /.nvmrc.
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: app/package-lock.json
       # onnxruntime-node's postinstall downloads a prebuilt native binary from GitHub
@@ -54,8 +57,8 @@ jobs:
           # Only this CI build targets the Pages subpath; local builds stay at root "/"
           # so `npm run preview` keeps working — see the comment in vite.config.ts.
           GH_PAGES: "true"
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: app/dist
 
@@ -67,4 +70,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

@@ -166,7 +166,7 @@ leaves is an export you explicitly download.
 
 ## Running it locally
 
-Requires Node 18+.
+Requires **Node 24** (`nvm use` picks it up from `.nvmrc`; CI builds and deploys on the same version).
 
 ```bash
 cd app
